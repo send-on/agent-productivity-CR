@@ -1,0 +1,7 @@
+# Node Websocket server
+pnpm-lock.yaml
+node_modules/.modules.yaml
+node_modules
+.env
+fly.toml
+snowflake.log

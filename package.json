@@ -1,0 +1,28 @@
+{
+  "name": "conversation-relay",
+  "version": "1.0.0",
+  "description": "WebSocket server for conversation relay",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [],
+  "author": "Leslie Sachs",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.1",
+    "express-ws": "^5.0.2",
+    "fs": "^0.0.1-security",
+    "openai": "^4.20.1",
+    "twilio": "^5.3.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
