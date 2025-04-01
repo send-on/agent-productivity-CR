@@ -72,8 +72,47 @@ const toolManifest = {
                     ]
                 }
             }
-        }
-    ]
-}
+        },
+        {
+          "type": "function",
+          "function": {
+              "name": "lookup-mortgage-with-phone",
+              "description": "Lookups up existing mortgage details for the customer phone number",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "description": "The phone number of the customer (caller)"
+                  }
+                },
+                "required": [
+                  "from"
+                ]
+              }
+            }
+          },
+          {
+            "type": "function",
+            "function": {
+                "name": "lookup-mortgage-with-name",
+                "description": "Lookups up existing mortgage details for the customer name",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "description": "The full name of the customer (caller)"
+                    }
+                  },
+                  "required": [
+                    "from"
+                  ]
+                }
+              }
+            }
+        ]
+      }
+   
 
 module.exports = { toolManifest };

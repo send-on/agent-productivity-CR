@@ -3,6 +3,7 @@ const EventEmitter = require('events');
 const axios = require('axios');
 require('dotenv').config();
 const { getCustomer } = require('../functions/tools/get-customer');
+const { lookupMortgageWithPhone } = require('../functions/tools/lookup-mortgage-with-phone');
 
 const { OPENAI_API_KEY } = process.env;
 const { OPENAI_MODEL } = process.env;
@@ -184,6 +185,15 @@ class GptService extends EventEmitter {
                         axios.post(COAST_WEBHOOK_URL, { log: 'live agent handoff complete... initiating...'}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
 
                         return responseContent;
+                    } else if (toolCall.function.name === "lookup-mortgage-with-phone") {
+                      console.log('*********last voice response*********', this.messages[this.messages.length - 2].content)
+                      const mortgageData = await lookupMortgageWithPhone(this.customerNumber);
+                      console.log('Fetched mortgage records:', mortgageData);
+                      this.messages.push({
+                        role: "tool",
+                        content: JSON.stringify(mortgageData),
+                        tool_call_id: toolCall.id,
+                    });
                     } else if (toolCall.function.name === "get-customer") {
                         const customerData = await getCustomer(this.customerNumber);
                         console.log(`[GptService] getCustomer Tool response: ${JSON.stringify(customerData)}`);
