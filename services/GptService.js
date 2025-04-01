@@ -53,7 +53,9 @@ class GptService extends EventEmitter {
             // Get the Content or toolCalls array from the response
             const assistantMessage = response.choices[0]?.message;
             const toolCalls = assistantMessage?.tool_calls;
-
+            console.log('******toolCalls:', toolCalls);
+            
+          
             // Add the assistant's message to this.messages
             this.messages.push(assistantMessage);
 
@@ -186,7 +188,7 @@ class GptService extends EventEmitter {
 
                         return responseContent;
                     } else if (toolCall.function.name === "lookup-mortgage-with-phone") {
-                      console.log('*********last voice response*********', this.messages[this.messages.length - 2].content)
+                      // console.log('*********last voice response*********', this)
                       const mortgageData = await lookupMortgageWithPhone(this.customerNumber);
                       console.log('Fetched mortgage records:', mortgageData);
                       this.messages.push({
