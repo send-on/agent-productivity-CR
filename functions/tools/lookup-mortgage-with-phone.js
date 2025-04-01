@@ -6,7 +6,7 @@ const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 // const AIRTABLE_API_KEY = 'patJhmdZ59HComv8H.fb359bb34db44f0c9d013720ccd47468fa5ee74eaa2cec8a30f48e8319f59048';
 // const AIRTABLE_BASE_ID = 'appTcHrCxmXTiOqcD';
 
-async function lookupMortgageWithPhone(phone) {
+async function lookupMortgageWithPhone(type, value) {
   
   try {
     // Validate Airtable configuration
@@ -35,8 +35,10 @@ async function lookupMortgageWithPhone(phone) {
     // }
 
     // Parse the identity header
-    let queryField = "phone";
-    let queryValue = phone;
+    let queryField = type;
+    let queryValue = value;
+    console.log('queryField:', queryField);
+    console.log('queryValue:', queryValue);
     // console.log('phone:', phone);
 
     // if (identityHeader.startsWith('user_id:')) {

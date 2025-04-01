@@ -81,13 +81,17 @@ const toolManifest = {
               "parameters": {
                 "type": "object",
                 "properties": {
-                  "from": {
+                  "type": {
                     "type": "string",
-                    "description": "The phone number of the customer (caller)"
+                    "description": "The type of identifier to use for the lookup. Can be 'phone' or 'name'."
+                  }, 
+                  "value": {
+                    "type": "string",
+                    "description": "The value of the identifier.  If type is a phone number then value is the phone number of the customer (caller)"
                   }
                 },
                 "required": [
-                  "from"
+                  "type", "value", 
                 ]
               }
             }
