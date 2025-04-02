@@ -21,9 +21,7 @@
     "express-ws": "^5.0.2",
     "fs": "^0.0.1-security",
     "openai": "^4.20.1",
-    "twilio": "^5.3.6"
-  },
-  "devDependencies": {
+    "twilio": "^5.3.6",
     "nodemon": "^3.0.2"
   }
 }
