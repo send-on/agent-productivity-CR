@@ -75,7 +75,7 @@ async function lookupMortgageWithPhone(type, value) {
     const records = await base('mortgages')
       .select({
         filterByFormula: `{${queryField}} = '${queryValue}'`,
-        maxRecords: 1,
+        maxRecords: 5,
       })
       .firstPage();
 

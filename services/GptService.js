@@ -4,6 +4,7 @@ const axios = require('axios');
 require('dotenv').config();
 const { getCustomer } = require('../functions/tools/get-customer');
 const { lookupMortgageWithPhone } = require('../functions/tools/lookup-mortgage-with-phone');
+const { upsertMortgage } = require('../functions/tools/upsert-mortgage');
 
 const { OPENAI_API_KEY } = process.env;
 const { OPENAI_MODEL } = process.env;
@@ -16,6 +17,7 @@ class GptService extends EventEmitter {
         super();
         this.openai = new OpenAI(); // Implicitly uses OPENAI_API_KEY
         this.model = OPENAI_MODEL;
+        this.temperature = 0.1;
         this.messages = [
             { role: "system", content: promptContext },
         ];
@@ -47,6 +49,7 @@ class GptService extends EventEmitter {
                 model: this.model,
                 tools: this.toolManifest,
                 messages: this.messages,
+                temperature: this.temperature,
                 stream: false,
             });
 
@@ -87,6 +90,7 @@ class GptService extends EventEmitter {
                         // Get the summary from the model
                         const summaryResponse = await this.openai.chat.completions.create({
                             model: this.model,
+                            temperature: this.temperature,
                             messages: this.messages,
                             stream: false,
                         });
@@ -130,6 +134,7 @@ class GptService extends EventEmitter {
 
                         const topicResponse = await this.openai.chat.completions.create({
                             model: this.model,
+                            temperature: this.temperature,
                             messages: this.messages,
                             stream: false,
                         });
@@ -143,6 +148,7 @@ class GptService extends EventEmitter {
 
                         const sentimentResponse = await this.openai.chat.completions.create({
                             model: this.model,
+                            temperature: this.temperature,
                             messages: this.messages,
                             stream: false,
                         });
@@ -201,6 +207,18 @@ class GptService extends EventEmitter {
                         content: JSON.stringify(mortgageData),
                         tool_call_id: toolCall.id,
                     });
+                  } else if (toolCall.function.name === "upsert-mortgage") {
+                    let args = JSON.parse(toolCalls[0].function.arguments);
+                    // arguments: '{"type":"phone","value":"+15623389588"}
+                    console.log('args:', args);
+                    
+                    const updatedRecord = await upsertMortgage(args.loan_application_id, args.data);
+                    console.log('Upserted data into mortgage records:', updatedRecord.fields);
+                    this.messages.push({
+                      role: "tool",
+                      content: JSON.stringify(updatedRecord),
+                      tool_call_id: toolCall.id,
+                  });
                     } else if (toolCall.function.name === "get-customer") {
                         const customerData = await getCustomer(this.customerNumber);
                         console.log(`[GptService] getCustomer Tool response: ${JSON.stringify(customerData)}`);
@@ -259,6 +277,7 @@ class GptService extends EventEmitter {
                 // After processing all tool calls, we need to get the final response from the model
                 const finalResponse = await this.openai.chat.completions.create({
                     model: this.model,
+                    temperature: this.temperature,
                     messages: this.messages,
                     stream: false,
                 });
@@ -281,7 +300,7 @@ class GptService extends EventEmitter {
             } else {
                 // If the toolCalls array is empty, then it is just a response so we keep the convo going.
                 const content = assistantMessage?.content || "";
-
+                
                 // Get the role of the response
                 // Add the response to the this.messages array
                 this.messages.push({

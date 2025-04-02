@@ -99,18 +99,22 @@ const toolManifest = {
           {
             "type": "function",
             "function": {
-                "name": "lookup-mortgage-with-name",
-                "description": "Lookups up existing mortgage details for the customer name",
+                "name": "upsert-mortgage",
+                "description": "Upserts mortgage details into database and is used when customer provides new information about their loan application",
                 "parameters": {
                   "type": "object",
                   "properties": {
-                    "from": {
+                    "loan_application_id": {
                       "type": "string",
-                      "description": "The full name of the customer (caller)"
+                      "description": "The loan application id that is incomplete"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "Object containing the mortgage data to be upserted where the key is the column name in the table and the value is the value to be upserted.",
                     }
                   },
                   "required": [
-                    "from"
+                    "loan_application_id", "data"
                   ]
                 }
               }
