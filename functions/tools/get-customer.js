@@ -5,7 +5,14 @@ const COAST_WEBHOOK_URL = process.env.COAST_WEBHOOK_URL;
 
 // Pull customer data and traits from Segment
 async function fetchCustomerProfile(caller) {
-  axios.post(COAST_WEBHOOK_URL, { log: `fetching segment profile for ${caller} ...`}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+  axios.post(COAST_WEBHOOK_URL, { 
+    sender: 'system',
+    type: "string",
+    message: `Fetching segment profile for ${caller} ...`, 
+  }, { 'Content-Type': 'application/json'})
+  .catch(err => console.log(err));
+
+  
   try {
     const URL = `https://profiles.segment.com/v1/spaces/${SEGMENT_SPACE}/collections/users/profiles/phone:${encodeURIComponent(caller)}/traits?limit=200`;
     console.log('URL:', URL);
@@ -30,7 +37,15 @@ async function fetchCustomerProfile(caller) {
       userId
     }
 
-    axios.post(COAST_WEBHOOK_URL, { segment_profile: { ...customerData }}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+    axios.post(COAST_WEBHOOK_URL, 
+      { 
+        sender: 'system: segment_profile',
+        type: 'JSON',
+        message: { ...customerData }}, 
+      { 'Content-Type': 'application/json'}
+    )
+    .catch(err => console.log(err));
+
     console.log('customerData:', JSON.stringify(customerData));
 
     return { customerData };

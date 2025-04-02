@@ -1,15 +1,15 @@
 {
-  "name": "conversation-relay",
+  "name": "agent-productivity-cr",
   "version": "1.0.0",
-  "description": "WebSocket server for conversation relay",
+  "description": "Twilio Conversastion Relay server application for Agent Productivity CR, a productivity tool for customer service agents.",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js",
+    "start": "nodemon server.js",
     "dev": "nodemon server.js"
   },
   "keywords": [],
-  "author": "Leslie Sachs",
+  "author": "Oliver Han",
   "license": "MIT",
   "dependencies": {
     "airtable": "^0.12.2",

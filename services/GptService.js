@@ -74,7 +74,15 @@ class GptService extends EventEmitter {
                     if (toolCall.function.name === "live-agent-handoff") {
                         console.log(`[GptService] Live Agent Handoff tool call: ${toolCall.function.name}`);
 
-                        axios.post(COAST_WEBHOOK_URL, { log: 'live agent handoff ready, creating summary of call......'}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+                        axios.post(COAST_WEBHOOK_URL, 
+                          { 
+                            sender: 'system',
+                            type: 'string',
+                            message: 'Live agent handoff ready, creating summary of call...'
+                          }, 
+                          { 'Content-Type': 'application/json'}
+                        )
+                        .catch(err => console.log(err));
                         
                         // Complete the live-agent-handoff
                         this.messages.push({
@@ -96,7 +104,15 @@ class GptService extends EventEmitter {
                         });
 
                         const summary = summaryResponse.choices[0]?.message?.content || "";
-                        axios.post(COAST_WEBHOOK_URL, { ai_summary: summary}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+                        axios.post(COAST_WEBHOOK_URL, 
+                          { 
+                            sender: 'system: ai_summary',
+                            type: 'string',
+                            message: summary
+                          }, 
+                          { 'Content-Type': 'application/json'}
+                        ).catch(err => console.log(err));
+                        
 
                         let user = null;
                         console.log('Summary of Convo:', summary);
@@ -189,19 +205,45 @@ class GptService extends EventEmitter {
                         };
 
                         console.log(`[GptService] Transfer to agent response: ${JSON.stringify(responseContent, null, 4)}`);
-                        axios.post(COAST_WEBHOOK_URL, { log: 'live agent handoff complete... initiating...'}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+
+                        axios.post(COAST_WEBHOOK_URL, 
+                          { 
+                            sender: 'system',
+                            type: 'string',
+                            message: 'Live agent handoff complete... initiating...'
+                          }, 
+                          { 'Content-Type': 'application/json'}
+                        ).catch(err => console.log(err));
 
                         return responseContent;
                     } else if (toolCall.function.name === "lookup-mortgage-with-phone") {
-                      // console.log('*********last voice response*********', this)
+
+                      
                       
                       
                       let args = JSON.parse(toolCalls[0].function.arguments);
                       // arguments: '{"type":"phone","value":"+15623389588"}
                       console.log('args:', args);
+                      axios.post(COAST_WEBHOOK_URL, 
+                        { 
+                          sender: 'system',
+                          type: 'string',
+                          message: `Looking up mortgage records for ${JSON.stringify(args)}...`
+                        }, 
+                        { 'Content-Type': 'application/json'}
+                      ).catch(err => console.log(err));
                       
                       const mortgageData = await lookupMortgageWithPhone(args.type, args.value);
                       console.log('Fetched mortgage records:', mortgageData);
+                      axios.post(COAST_WEBHOOK_URL, 
+                        { 
+                          sender: 'system: mortgage_records',
+                          type: 'JSON',
+                          message: mortgageData
+                        }, 
+                        { 'Content-Type': 'application/json'}
+                      ).catch(err => console.log(err));
+
                       this.messages.push({
                         role: "tool",
                         content: JSON.stringify(mortgageData),
@@ -229,9 +271,16 @@ class GptService extends EventEmitter {
                             tool_call_id: toolCall.id,
                         });
                     } else if (toolCall.function.name === "update-customer-profile") {
-                        axios.post(COAST_WEBHOOK_URL, { log: `Updating segment customer profile...`}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
                         console.log('updating customer profile with:', toolCall.function.arguments);
-                        const args = JSON.parse(toolCall.function.arguments);
+                        let args = JSON.parse(toolCall.function.arguments);
+                        axios.post(COAST_WEBHOOK_URL, 
+                          { 
+                            sender: 'system',
+                            type: 'string',
+                            message: `Updating segment customer profile with ${JSON.stringify(args)}`
+                          }, 
+                          { 'Content-Type': 'application/json'}
+                        ).catch(err => console.log(err));
                         let newTraits = {...args};
                         delete newTraits.userId;
 
@@ -248,7 +297,15 @@ class GptService extends EventEmitter {
                                 { 'Content-Type': 'application/json'})
                                 .catch(err => console.log(err));
 
-                            axios.post(COAST_WEBHOOK_URL, { log: `Segment profile updated with: ${JSON.stringify(newTraits)}`}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+                            axios.post(COAST_WEBHOOK_URL, 
+                              { 
+                                sender: 'system',
+                                type: 'string',
+                                message: `Segment profile updated with: ${JSON.stringify(newTraits)}`
+                              }, 
+                              { 'Content-Type': 'application/json'}
+                            ).catch(err => console.log(err));
+                            
                             console.log('segment profile updated with:', JSON.stringify(newTraits));
 
                             this.messages.push({
@@ -292,7 +349,14 @@ class GptService extends EventEmitter {
                         last: true
                     };
 
-                    axios.post(COAST_WEBHOOK_URL, { conversation_relay: `Assistant Says: ${content}`}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+                    axios.post(COAST_WEBHOOK_URL, 
+                      { 
+                        sender: 'Conversation Relay Assistant',
+                        type: 'string',
+                        message: content
+                      }, 
+                      { 'Content-Type': 'application/json'}
+                    ).catch(err => console.log(err));
 
                     // console.log(`[GptService] Text Response: ${JSON.stringify(responseContent, null, 4)}`);
                     return responseContent;
@@ -315,7 +379,14 @@ class GptService extends EventEmitter {
                     last: true
                 };
 
-                axios.post(COAST_WEBHOOK_URL, { conversation_relay: `Assistant Says: ${content}`}, { 'Content-Type': 'application/json'}).catch(err => console.log(err));
+                axios.post(COAST_WEBHOOK_URL, 
+                  { 
+                    sender: 'Conversation Relay Assistant',
+                    type: 'string',
+                    message: content
+                  }, 
+                  { 'Content-Type': 'application/json'}
+                ).catch(err => console.log(err));
 
                 return responseContent
             }

@@ -3,6 +3,8 @@ const express = require('express');
 const ExpressWs = require('express-ws');
 const fs = require('fs');
 const cors = require('cors');
+const axios = require('axios');
+const COAST_WEBHOOK_URL = process.env.COAST_WEBHOOK_URL;
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +40,15 @@ app.ws('/conversation-relay', (ws) => {
                 case 'prompt':
                     // OpenAI Model
                     console.info(`[Conversation Relay] Caller Message: ${message.voicePrompt}`);
+                    axios.post(COAST_WEBHOOK_URL, 
+                      { 
+                        sender: 'Customer',
+                        type: 'string',
+                        message: `${JSON.stringify(message.voicePrompt)}`
+                      }, 
+                      { 'Content-Type': 'application/json'}
+                    )
+                    .catch(err => console.log(err));
 
                     gptResponse = await gptService.generateResponse('user', message.voicePrompt);
 
@@ -48,6 +59,15 @@ app.ws('/conversation-relay', (ws) => {
                 case 'interrupt':
                     // Handle interrupt message
                     console.info(`[Conversation Relay] Interrupt ...... : ${JSON.stringify(message, null, 4)}`);
+                    axios.post(COAST_WEBHOOK_URL, 
+                      { 
+                        sender: 'system',
+                        type: 'string',
+                        message: 'Interrupted'
+                      }, 
+                      { 'Content-Type': 'application/json'}
+                    ).catch(err => console.log(err));
+
                     break;
                 case 'dtmf':
                     // Handle DTMF digits. We are just logging them out for now.

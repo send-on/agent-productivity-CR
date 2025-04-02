@@ -112,4 +112,5 @@ pnpm dev
 4. Open a new terminal window and expose the local server to the internet using ngrok:
 ```bash
 ngrok http --domain <your-ngrok-domain> 3001
+
 ```
