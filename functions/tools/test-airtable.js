@@ -3,21 +3,23 @@ const Airtable = require('airtable');
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 
-async function lookupMortgage(identifier, value) {
-  
+export async function lookupMortgage(identifier, value) {
   try {
     // Validate Airtable configuration
     console.log('AIRTABLE_API_KEY:', AIRTABLE_API_KEY);
     if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-      return (null, {
-        status: 500,
-        message:
-          'Airtable configuration error. Please check environment variables.',
-      });
+      return (
+        null,
+        {
+          status: 500,
+          message:
+            'Airtable configuration error. Please check environment variables.',
+        }
+      );
     }
 
     // Airtable setup
-    const base = new Airtable({ apiKey:AIRTABLE_API_KEY }).base(
+    const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(
       AIRTABLE_BASE_ID
     );
 
@@ -76,24 +78,33 @@ async function lookupMortgage(identifier, value) {
 
     if (!records || records.length === 0) {
       console.log(`No customer found for ${queryField}: ${queryValue}`);
-      return (null, {
-        status: 404,
-        message: `No customer found for ${queryField}: ${queryValue}`,
-      });
+      return (
+        null,
+        {
+          status: 404,
+          message: `No customer found for ${queryField}: ${queryValue}`,
+        }
+      );
     }
     let mortgageData = records.map((record) => record.fields);
-    console.log('mortgageData', mortgageData)
-    return (null, {
-      status: 200,
-      customer: records.map((record) => record.fields),
-    });
+    console.log('mortgageData', mortgageData);
+    return (
+      null,
+      {
+        status: 200,
+        customer: records.map((record) => record.fields),
+      }
+    );
   } catch (err) {
     console.error('Unexpected error:', err.message);
-    return (null, {
-      status: 500,
-      message: 'An unexpected error occurred. Please try again later.',
-    });
+    return (
+      null,
+      {
+        status: 500,
+        message: 'An unexpected error occurred. Please try again later.',
+      }
+    );
   }
 }
 
-lookupMortgage('name', "Srinivas Shipchandler");
+lookupMortgage('name', 'Srinivas Shipchandler');

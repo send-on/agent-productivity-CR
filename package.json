@@ -1,12 +1,15 @@
 {
   "name": "agent-productivity-cr",
   "version": "1.0.0",
-  "description": "Twilio Conversastion Relay server application for Agent Productivity CR, a productivity tool for customer service agents.",
-  "main": "server.js",
-  "type": "commonjs",
+  "description": "Twilio Conversation Relay server application for Agent Productivity CR, a productivity tool for customer service agents.",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "prestart": "npm run build",
+    "deploy": "",
+    "predeploy": "npm run build",
+    "dev": "npx tsx watch server.ts",
+    "dev:serverless": "tsc --watch"
   },
   "keywords": [],
   "author": "Oliver Han",
@@ -21,7 +24,15 @@
     "express-ws": "^5.0.2",
     "fs": "^0.0.1-security",
     "openai": "^4.20.1",
-    "twilio": "^5.3.6",
-    "nodemon": "^3.0.2"
+    "twilio": "^5.3.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/express-ws": "^3.0.5",
+    "@types/node": "^22.14.0",
+    "@typescript-eslint/parser": "^8.29.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
   }
 }
