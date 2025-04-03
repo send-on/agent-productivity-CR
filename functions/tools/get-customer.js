@@ -39,7 +39,7 @@ async function fetchCustomerProfile(caller) {
 
     axios.post(COAST_WEBHOOK_URL, 
       { 
-        sender: 'system: segment_profile',
+        sender: 'system:segment_profile',
         type: 'JSON',
         message: { ...customerData }}, 
       { 'Content-Type': 'application/json'}

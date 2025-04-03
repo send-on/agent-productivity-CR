@@ -32,12 +32,23 @@ class GptService extends EventEmitter {
         this.customerNumber = from;
         this.callSid = callSid;
 
+        axios.post(COAST_WEBHOOK_URL, 
+          { 
+            sender: 'begin',
+            type: 'string',
+            message: this.customerNumber
+          }, 
+          { 'Content-Type': 'application/json'}
+        )
+        .catch(err => console.log(err));
+
         // Update this.messages with the phone "to" and the "from" numbers
         console.log(`[GptService] Call to: ${this.twilioNumber} from: ${this.customerNumber} with call SID: ${this.callSid}`);
         this.messages.push({ role: 'system', content: `The customer phone number or "from" number is ${this.customerNumber}, the callSid is ${this.callSid} and the number to send SMSs from is: ${this.twilioNumber}. Use this information throughout as the reference when calling any of the tools. Specifically use the callSid when you use the "transfer-to-agent" tool to transfer the call to the agent` });
     }
 
-    async generateResponse(role = 'user', prompt) {
+    async generateResponse(role = 'user', prompt, external_messages ) {
+      
         // console.log(`[GptService] Generating response for role: ${role} with prompt: ${prompt}`);
         // Add the prompt as role user to the existing this.messages array
         this.messages.push({ role: role, content: prompt });
@@ -76,9 +87,9 @@ class GptService extends EventEmitter {
 
                         axios.post(COAST_WEBHOOK_URL, 
                           { 
-                            sender: 'system',
+                            sender: 'system:tool',
                             type: 'string',
-                            message: 'Live agent handoff ready, creating summary of call...'
+                            message: 'Calling live-agent-handoff and creating summary of call...'
                           }, 
                           { 'Content-Type': 'application/json'}
                         )
@@ -104,9 +115,9 @@ class GptService extends EventEmitter {
                         });
 
                         const summary = summaryResponse.choices[0]?.message?.content || "";
-                        axios.post(COAST_WEBHOOK_URL, 
+                        axios.post(_WEBHOOK_URL, 
                           { 
-                            sender: 'system: ai_summary',
+                            sender: 'system:ai_summary',
                             type: 'string',
                             message: summary
                           }, 
@@ -208,7 +219,7 @@ class GptService extends EventEmitter {
 
                         axios.post(COAST_WEBHOOK_URL, 
                           { 
-                            sender: 'system',
+                            sender: 'system:tool',
                             type: 'string',
                             message: 'Live agent handoff complete... initiating...'
                           }, 
@@ -218,17 +229,12 @@ class GptService extends EventEmitter {
                         return responseContent;
                     } else if (toolCall.function.name === "lookup-mortgage-with-phone") {
 
-                      
-                      
-                      
                       let args = JSON.parse(toolCalls[0].function.arguments);
-                      // arguments: '{"type":"phone","value":"+15623389588"}
-                      console.log('args:', args);
                       axios.post(COAST_WEBHOOK_URL, 
                         { 
-                          sender: 'system',
+                          sender: 'system:tool',
                           type: 'string',
-                          message: `Looking up mortgage records for ${JSON.stringify(args)}...`
+                          message: `Calling lookup-mortgage-with-phone to fetch records for ${JSON.stringify(args)}...`
                         }, 
                         { 'Content-Type': 'application/json'}
                       ).catch(err => console.log(err));
@@ -237,7 +243,7 @@ class GptService extends EventEmitter {
                       console.log('Fetched mortgage records:', mortgageData);
                       axios.post(COAST_WEBHOOK_URL, 
                         { 
-                          sender: 'system: mortgage_records',
+                          sender: 'system:mortgage_records',
                           type: 'JSON',
                           message: mortgageData
                         }, 
@@ -250,11 +256,29 @@ class GptService extends EventEmitter {
                         tool_call_id: toolCall.id,
                     });
                   } else if (toolCall.function.name === "upsert-mortgage") {
+                    
                     let args = JSON.parse(toolCalls[0].function.arguments);
                     // arguments: '{"type":"phone","value":"+15623389588"}
                     console.log('args:', args);
+                    axios.post(COAST_WEBHOOK_URL, 
+                      { 
+                        sender: 'system:tool',
+                        type: 'string',
+                        message: `Calling upsert-mortgage to upsert records on ${JSON.stringify(args)}...`
+                      }, 
+                      { 'Content-Type': 'application/json'}
+                    ).catch(err => console.log(err));
                     
                     const updatedRecord = await upsertMortgage(args.loan_application_id, args.data);
+                    axios.post(COAST_WEBHOOK_URL, 
+                      { 
+                        sender: 'system:ortgage_records',
+                        type: 'JSON',
+                        message: updatedRecord.fields
+                      }, 
+                      { 'Content-Type': 'application/json'}
+                    ).catch(err => console.log(err));
+
                     console.log('Upserted data into mortgage records:', updatedRecord.fields);
                     this.messages.push({
                       role: "tool",
@@ -262,8 +286,26 @@ class GptService extends EventEmitter {
                       tool_call_id: toolCall.id,
                   });
                     } else if (toolCall.function.name === "get-customer") {
+                      axios.post(COAST_WEBHOOK_URL, 
+                        { 
+                          sender: 'system:tool',
+                          type: 'string',
+                          message: `Calling tool get-customer on ${JSON.stringify(this.customerNumber)}`
+                        }, 
+                        { 'Content-Type': 'application/json'}
+                      ).catch(err => console.log(err));
+
                         const customerData = await getCustomer(this.customerNumber);
                         console.log(`[GptService] getCustomer Tool response: ${JSON.stringify(customerData)}`);
+                        axios.post(COAST_WEBHOOK_URL, 
+                          { 
+                            sender: 'system:custemer_profile',
+                            type: 'JSON',
+                            message: customerData
+                          }, 
+                          { 'Content-Type': 'application/json'}
+                        ).catch(err => console.log(err));
+
 
                         this.messages.push({
                             role: "tool",
@@ -275,9 +317,9 @@ class GptService extends EventEmitter {
                         let args = JSON.parse(toolCall.function.arguments);
                         axios.post(COAST_WEBHOOK_URL, 
                           { 
-                            sender: 'system',
+                            sender: 'system:tool',
                             type: 'string',
-                            message: `Updating segment customer profile with ${JSON.stringify(args)}`
+                            message: `Calling update-customer-profile top update Segment customer profile with ${JSON.stringify(args)}`
                           }, 
                           { 'Content-Type': 'application/json'}
                         ).catch(err => console.log(err));
@@ -299,9 +341,9 @@ class GptService extends EventEmitter {
 
                             axios.post(COAST_WEBHOOK_URL, 
                               { 
-                                sender: 'system',
-                                type: 'string',
-                                message: `Segment profile updated with: ${JSON.stringify(newTraits)}`
+                                sender: 'system:updated_traits',
+                                type: 'JSON',
+                                message: newTraits
                               }, 
                               { 'Content-Type': 'application/json'}
                             ).catch(err => console.log(err));
