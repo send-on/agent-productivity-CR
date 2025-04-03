@@ -115,7 +115,7 @@ class GptService extends EventEmitter {
                         });
 
                         const summary = summaryResponse.choices[0]?.message?.content || "";
-                        axios.post(_WEBHOOK_URL, 
+                        axios.post(COAST_WEBHOOK_URL, 
                           { 
                             sender: 'system:ai_summary',
                             type: 'string',
@@ -391,14 +391,14 @@ class GptService extends EventEmitter {
                         last: true
                     };
 
-                    axios.post(COAST_WEBHOOK_URL, 
-                      { 
-                        sender: 'Conversation Relay Assistant',
-                        type: 'string',
-                        message: content
-                      }, 
-                      { 'Content-Type': 'application/json'}
-                    ).catch(err => console.log(err));
+                    // axios.post(COAST_WEBHOOK_URL, 
+                    //   { 
+                    //     sender: 'Conversation Relay Assistant',
+                    //     type: 'string',
+                    //     message: JSON.stringify(content)
+                    //   }, 
+                    //   { 'Content-Type': 'application/json'}
+                    // ).catch(err => console.log(err));
 
                     // console.log(`[GptService] Text Response: ${JSON.stringify(responseContent, null, 4)}`);
                     return responseContent;
@@ -425,7 +425,7 @@ class GptService extends EventEmitter {
                   { 
                     sender: 'Conversation Relay Assistant',
                     type: 'string',
-                    message: content
+                    message: JSON.stringify(content)
                   }, 
                   { 'Content-Type': 'application/json'}
                 ).catch(err => console.log(err));

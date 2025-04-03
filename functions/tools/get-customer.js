@@ -37,14 +37,14 @@ async function fetchCustomerProfile(caller) {
       userId
     }
 
-    axios.post(COAST_WEBHOOK_URL, 
-      { 
-        sender: 'system:segment_profile',
-        type: 'JSON',
-        message: { ...customerData }}, 
-      { 'Content-Type': 'application/json'}
-    )
-    .catch(err => console.log(err));
+    // axios.post(COAST_WEBHOOK_URL, 
+    //   { 
+    //     sender: 'system:segment_profile',
+    //     type: 'JSON',
+    //     message: { ...customerData }}, 
+    //   { 'Content-Type': 'application/json'}
+    // )
+    // .catch(err => console.log(err));
 
     console.log('customerData:', JSON.stringify(customerData));
 
