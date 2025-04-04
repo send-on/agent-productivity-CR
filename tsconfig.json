@@ -17,6 +17,7 @@
     "baseUrl": ".",
     "strict": true,
     "forceConsistentCasingInFileNames": true,
+    "noEmit": false,
   },
   "include": [
     "assets/**/*",
