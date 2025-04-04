@@ -17,6 +17,9 @@ const promptContext: string = fs.readFileSync('./assets/context.md', 'utf-8');
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const COAST_WEBHOOK_URL: string = process.env.COAST_WEBHOOK_URL || '';
 
+let external_messages = '';
+let messageWaiting = false;
+
 const { app } = ExpressWs(express());
 app.use(express.urlencoded({ extended: true })).use(express.json());
 
@@ -34,11 +37,30 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
+app.get('/text', (req, res) => {
+  messageWaiting = true;
+  external_messages = 'Pull up my loans';
+  console.log('external_messages in GET', external_messages);
+  res.send('text recieved');
+});
+
 app.ws('/conversation-relay', (ws: WebSocket) => {
   console.log('New Conversation Relay websocket established');
   let gptService: GptService | null = null;
 
   ws.on('message', async (data: string) => {
+    let gptResponse = '';
+    if (messageWaiting) {
+      console.log('external_messages in ws', external_messages);
+      messageWaiting = !messageWaiting;
+      // @ts-expect-error
+      gptResponse = await gptService.generateResponse(
+        'user',
+        external_messages
+      );
+      ws.send(JSON.stringify(gptResponse));
+    }
+
     try {
       const message = JSON.parse(data);
       console.log(
@@ -74,11 +96,14 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             .catch((err) => console.log(err));
 
           if (gptService) {
-            // @ts-expect-error
             gptResponse = await gptService.generateResponse(
               'user',
-              message.voicePrompt
+              message.voicePrompt,
+              messageWaiting,
+              // @ts-expect-error
+              external_messages
             );
+
             console.info(
               `[Conversation Relay] Bot Response: ${JSON.stringify(
                 gptResponse,
@@ -86,6 +111,18 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
                 4
               )}`
             );
+
+            axios
+              .post(
+                COAST_WEBHOOK_URL,
+                {
+                  sender: 'Concversation Relay Assistant',
+                  type: 'string',
+                  message: gptResponse.token,
+                },
+                { headers: { 'Content-Type': 'application/json' } }
+              )
+              .catch((err) => console.log(err));
             ws.send(JSON.stringify(gptResponse));
           }
           break;
@@ -101,7 +138,11 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           axios
             .post(
               COAST_WEBHOOK_URL,
-              { sender: 'system', type: 'string', message: 'Interrupted' },
+              {
+                sender: 'interruption',
+                type: 'string',
+                message: 'Interrupted',
+              },
               { headers: { 'Content-Type': 'application/json' } }
             )
             .catch((err) => console.log(err));

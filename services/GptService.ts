@@ -496,17 +496,17 @@ export class GptService extends EventEmitter {
             last: true,
           };
 
-          axios
-            .post(
-              COAST_WEBHOOK_URL,
-              {
-                sender: 'Conversation Relay Assistant',
-                type: 'string',
-                message: content,
-              },
-              { headers: { 'Content-Type': 'application/json' } }
-            )
-            .catch((err) => console.log(err));
+          // axios
+          //   .post(
+          //     COAST_WEBHOOK_URL,
+          //     {
+          //       sender: 'Conversation Relay Assistant',
+          //       type: 'string',
+          //       message: content,
+          //     },
+          //     { headers: { 'Content-Type': 'application/json' } }
+          //   )
+          //   .catch((err) => console.log(err));
 
           // console.log(`[GptService] Text Response: ${JSON.stringify(responseContent, null, 4)}`);
           return responseContent;
@@ -534,7 +534,7 @@ export class GptService extends EventEmitter {
             {
               sender: 'Conversation Relay Assistant',
               type: 'string',
-              message: content,
+              message: JSON.stringify(content),
             },
             { headers: { 'Content-Type': 'application/json' } }
           )
