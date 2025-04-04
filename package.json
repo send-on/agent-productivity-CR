@@ -6,7 +6,6 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "prestart": "npm run build",
-    "postinstall": "tsc",
     "deploy": "",
     "predeploy": "npm run build",
     "dev": "npx tsx watch server.ts",
