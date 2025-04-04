@@ -5,16 +5,19 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
+    "start:serverless": "twilio-run --functions-folder dist/functions/serverless",
     "prestart": "npm run build",
-    "deploy": "",
+    "deploy": "ts-node serviceDeployment/deploy.ts",
     "predeploy": "npm run build",
-    "dev": "npx tsx watch server.ts",
-    "dev:serverless": "tsc --watch"
+    "watch": "tsc --watch",
+    "dev": "concurrently --names \"TS-Watch,Express,Serverless\" -c \"blue,green,magenta\" \"npm run watch\" \"npm run start\" \"npm run start:serverless\""
   },
   "keywords": [],
   "author": "Oliver Han",
   "license": "MIT",
   "dependencies": {
+    "@twilio-labs/serverless-runtime-types": "^4.0.1",
+    "@twilio/runtime-handler": "2.0.1",
     "airtable": "^0.12.2",
     "axios": "^1.7.7",
     "body-parser": "^1.20.3",
@@ -33,6 +36,8 @@
     "@types/express-ws": "^3.0.5",
     "@types/node": "^22.14.0",
     "@typescript-eslint/parser": "^8.29.0",
-    "tsx": "^4.19.3"
+    "concurrently": "^9.1.2",
+    "ts-node": "^10.9.2",
+    "twilio-run": "^4.1.0"
   }
 }
