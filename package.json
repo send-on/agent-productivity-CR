@@ -25,7 +25,8 @@
     "express-ws": "^5.0.2",
     "fs": "^0.0.1-security",
     "openai": "^4.20.1",
-    "twilio": "^5.3.6"
+    "twilio": "^5.3.6",
+    "typescript": "^5.8.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -33,7 +34,6 @@
     "@types/express-ws": "^3.0.5",
     "@types/node": "^22.14.0",
     "@typescript-eslint/parser": "^8.29.0",
-    "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "tsx": "^4.19.3"
   }
 }
