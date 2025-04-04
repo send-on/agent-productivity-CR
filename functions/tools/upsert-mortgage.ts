@@ -1,22 +1,18 @@
-const Airtable = require('airtable');
+import Airtable from 'airtable';
 // const axios = require('axios');
+import dotenv from 'dotenv';
+dotenv.config();
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 
-
-async function upsertMortgage(loan_application_id, data) {
+export async function upsertMortgage(loan_application_id, data) {
   try {
-    console.log('loan_application_id', loan_application_id)
+    console.log('loan_application_id', loan_application_id);
     console.log('data', data);
     // Validate required configuration
-    if (
-      !AIRTABLE_API_KEY ||
-      !AIRTABLE_BASE_ID 
-    ) {
+    if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
       throw new Error('Missing required configuration');
     }
-
-
 
     // Parse the identity header
     let queryField = 'loan_application_id';
@@ -48,7 +44,10 @@ async function upsertMortgage(loan_application_id, data) {
     console.log('Airtable record:', record);
 
     if (!record) {
-      return callback(null, { error: 'User record not found' });
+      return (
+        // @ts-expect-error
+        null, { error: 'User record not found' }
+      );
     }
 
     // Extract valid fields (must be in columnNames and NOT in ignoreList)
@@ -58,22 +57,23 @@ async function upsertMortgage(loan_application_id, data) {
       //     airtableConfig.columnNames.includes(key) &&
       //     !airtableConfig.ignoreList.includes(key)
       // )
-      .reduce(
-        (acc, key) => {
-          acc[key] = data[key];
-          return acc;
-        },
-        {}
-      );
+      .reduce((acc, key) => {
+        acc[key] = data[key];
+        return acc;
+      }, {});
 
     if (Object.keys(validFields).length > 0) {
-      return await base('mortgages').update([{ id: record.id, fields: validFields }]);
+      return await base('mortgages').update([
+        { id: record.id, fields: validFields },
+      ]);
     }
 
     // return (null, { message: 'Updated missing fields', data });
   } catch (err) {
-    console.error('Error in function:', (err).message);
+    if (err instanceof Error) {
+      console.error('Error in function:', err.message);
+    } else {
+      console.error('Error in function:', err);
+    }
   }
-};
-
-module.exports = { upsertMortgage };
+}

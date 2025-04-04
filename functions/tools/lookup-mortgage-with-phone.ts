@@ -1,26 +1,31 @@
-const Airtable = require('airtable');
+import Airtable from 'airtable';
 // const axios = require('axios');
+import dotenv from 'dotenv';
+dotenv.config();
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 
 // const AIRTABLE_API_KEY = 'patJhmdZ59HComv8H.fb359bb34db44f0c9d013720ccd47468fa5ee74eaa2cec8a30f48e8319f59048';
 // const AIRTABLE_BASE_ID = 'appTcHrCxmXTiOqcD';
 
-async function lookupMortgage(phone) {
-  
+export async function lookupMortgageWithPhone(type, value) {
   try {
     // Validate Airtable configuration
     console.log('AIRTABLE_API_KEY:', AIRTABLE_API_KEY);
     if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-      return (null, {
-        status: 500,
-        message:
-          'Airtable configuration error. Please check environment variables.',
-      });
+      return (
+        // @ts-expect-error
+        null,
+        {
+          status: 500,
+          message:
+            'Airtable configuration error. Please check environment variables.',
+        }
+      );
     }
 
     // Airtable setup
-    const base = new Airtable({ apiKey:AIRTABLE_API_KEY }).base(
+    const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(
       AIRTABLE_BASE_ID
     );
 
@@ -35,8 +40,10 @@ async function lookupMortgage(phone) {
     // }
 
     // Parse the identity header
-    let queryField = "phone";
-    let queryValue = phone;
+    let queryField = type;
+    let queryValue = value;
+    console.log('queryField:', queryField);
+    console.log('queryValue:', queryValue);
     // console.log('phone:', phone);
 
     // if (identityHeader.startsWith('user_id:')) {
@@ -73,26 +80,37 @@ async function lookupMortgage(phone) {
     const records = await base('mortgages')
       .select({
         filterByFormula: `{${queryField}} = '${queryValue}'`,
-        maxRecords: 1,
+        maxRecords: 5,
       })
       .firstPage();
 
     if (!records || records.length === 0) {
       console.log(`No customer found for ${queryField}: ${queryValue}`);
-      return (null, {
-        status: 404,
-        message: `No customer found for ${queryField}: ${queryValue}`,
-      });
+      return (
+        // @ts-expect-error
+        null,
+        {
+          status: 404,
+          message: `No customer found for ${queryField}: ${queryValue}`,
+        }
+      );
     }
-    let mortgageRecords = records.map((record) => record.fields)
-    
-    return mortgageRecords
+    let mortgageRecords = records.map((record) => record.fields);
+
+    return mortgageRecords;
   } catch (err) {
-    console.error('Unexpected error:', err.message);
-    return (null, {
-      status: 500,
-      message: 'An unexpected error occurred. Please try again later.',
-    });
+    if (err instanceof Error) {
+      console.error('Unexpected error:', err.message);
+    } else {
+      console.error('Unexpected error:', err);
+    }
+    return (
+      // @ts-expect-error
+      null,
+      {
+        status: 500,
+        message: 'An unexpected error occurred. Please try again later.',
+      }
+    );
   }
 }
-module.exports = { lookupMortgage };
