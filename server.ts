@@ -7,13 +7,16 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { WebSocket } from 'ws';
 import axios from 'axios';
 import cors from 'cors';
-import { toolManifest } from './assets/toolManifest';
-import { GptService } from './services/GptService';
-import { getCustomer } from './functions/tools/get-customer';
+import { toolManifest } from './agent/tools/toolManifest';
+import { GptService } from './responseServer/GptService';
+import { getCustomer } from './agent/tools/getCustomer';
 
 dotenv.config();
 
-const promptContext: string = fs.readFileSync('./assets/context.md', 'utf-8');
+const promptContext: string = fs.readFileSync(
+  './agent/instructions/context.md',
+  'utf-8'
+);
 
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
@@ -58,7 +61,7 @@ app.get('/text', (req, res) => {
   messageWaiting = true;
   external_messages = 'Pull up my loans';
   console.log('external_messages in GET', external_messages);
-  res.send('text recieved');
+  res.send('text received');
 });
 
 app.ws('/conversation-relay', (ws: WebSocket) => {
@@ -133,7 +136,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
               .post(
                 COAST_WEBHOOK_URL,
                 {
-                  sender: 'Concversation Relay Assistant',
+                  sender: 'Conversation Relay Assistant',
                   type: 'string',
                   message: gptResponse.token,
                 },
@@ -181,7 +184,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
 
           console.log('Fetching customer data for:', message.from);
           const customerData = await getCustomer(message.from);
-          const customerName = customerData?.firstName;
+          const customerName = customerData?.first_name;
 
           let greetingText = customerName
             ? `Greet the customer with name ${customerName} in a friendly manner. Do not constantly use their name, but drop it in occasionally. Tell them that you have to first verify their details before you can proceed to ensure confidentiality of the conversation.`
