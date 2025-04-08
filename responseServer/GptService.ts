@@ -1,11 +1,10 @@
 import OpenAI from 'openai';
 import EventEmitter from 'events';
 import axios from 'axios';
-import { getCustomer } from '../functions/tools/get-customer';
-import { lookupMortgageWithPhone } from '../functions/tools/lookup-mortgage-with-phone';
-import { upsertMortgage } from '../functions/tools/upsert-mortgage';
-
 import dotenv from 'dotenv';
+import { getCustomer } from '../agent/tools/getCustomer';
+import { lookupMortgageWithPhone } from '../agent/tools/lookupMortgageWithPhone';
+import { upsertMortgage } from '../agent/tools/upsertMortgage';
 dotenv.config();
 
 const { OPENAI_API_KEY } = process.env;

@@ -7,13 +7,16 @@ import { createProxyMiddleware } from 'http-proxy-middleware';
 import { WebSocket } from 'ws';
 import axios from 'axios';
 import cors from 'cors';
-import { toolManifest } from './assets/toolManifest';
-import { GptService } from './services/GptService';
-import { getCustomer } from './functions/tools/get-customer';
+import { toolManifest } from './agent/tools/toolManifest';
+import { GptService } from './responseServer/GptService';
+import { getCustomer } from './agent/tools/getCustomer';
 
 dotenv.config();
 
-const promptContext: string = fs.readFileSync('./assets/context.md', 'utf-8');
+const promptContext: string = fs.readFileSync(
+  './agent/instructions/context.md',
+  'utf-8'
+);
 
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
@@ -58,7 +61,7 @@ app.get('/text', (req, res) => {
   messageWaiting = true;
   external_messages = 'Pull up my loans';
   console.log('external_messages in GET', external_messages);
-  res.send('text recieved');
+  res.send('text received');
 });
 
 app.ws('/conversation-relay', (ws: WebSocket) => {
@@ -133,7 +136,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
               .post(
                 COAST_WEBHOOK_URL,
                 {
-                  sender: 'Concversation Relay Assistant',
+                  sender: 'Conversation Relay Assistant',
                   type: 'string',
                   message: gptResponse.token,
                 },

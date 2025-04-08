@@ -22,7 +22,8 @@
   "include": [
     "assets/**/*",
     "functions/**/*",
-    "services/**/*",
+    "responseServer/**/*",
+    "agent/**/*",
     "server.ts"
   ],
   "exclude": [
