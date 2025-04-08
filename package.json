@@ -5,12 +5,11 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
-    "start:serverless": "twilio-run --functions-folder dist/functions/serverless",
     "prestart": "npm run build",
     "deploy": "ts-node serviceDeployment/deploy.ts",
     "predeploy": "npm run build",
-    "watch": "tsc --watch",
-    "dev": "concurrently --names \"TS-Watch,Express,Serverless\" -c \"blue,green,magenta\" \"npm run watch\" \"npm run start\" \"npm run start:serverless\""
+    "dev": "concurrently --names \"TS-Watch,Express,Serverless\" -c \"blue,green,magenta\" \"tsc --watch\" \"NODE_ENV=development ts-node server.ts\" \"npm run dev:serverless\"",
+    "dev:serverless": "ts-node functions/startServerless.ts"
   },
   "keywords": [],
   "author": "Oliver Han",
@@ -26,6 +25,7 @@
     "express": "^4.21.1",
     "express-ws": "^5.0.2",
     "fs": "^0.0.1-security",
+    "http-proxy-middleware": "^3.0.3",
     "openai": "^4.20.1",
     "twilio": "^5.3.6",
     "typescript": "^5.8.2"
