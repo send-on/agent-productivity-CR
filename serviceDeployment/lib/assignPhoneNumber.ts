@@ -1,5 +1,7 @@
 import { Twilio } from 'twilio';
 import { updateEnvFile } from '../helpers/updateEnvFile';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export async function assignPhoneNumber(client: Twilio) {
   const functionsDomain = process.env.FUNCTIONS_DOMAIN;
