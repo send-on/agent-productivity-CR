@@ -2,6 +2,7 @@ import { TwilioServerlessApiClient } from '@twilio-labs/serverless-api';
 import twilio, { Twilio } from 'twilio';
 import deployFunctions from './lib/deployFunctions';
 import { createTaskRouterService } from './lib/createTaskRouter';
+import { assignPhoneNumber } from './lib/assignPhoneNumber';
 
 /**
  * Main deployment script that orchestrates the creation of the assistant,
@@ -33,6 +34,9 @@ async function deploy() {
 
     console.log('Step 2: Deploy Serverless Functions...');
     const result = await deployFunctions(serverlessClient);
+
+    console.log('Step 3: Assign Phone Number...');
+    await assignPhoneNumber(client);
 
     const variables = {
       TWILIO_SMS_FROM_NUMBER: process.env.TWILIO_SMS_FROM_NUMBER,
