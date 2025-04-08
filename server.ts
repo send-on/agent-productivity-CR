@@ -3,6 +3,7 @@ import fs from 'fs';
 import express, { Request, Response } from 'express';
 import expressWs from 'express-ws';
 import ExpressWs from 'express-ws';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { WebSocket } from 'ws';
 import axios from 'axios';
 import cors from 'cors';
@@ -15,6 +16,7 @@ dotenv.config();
 const promptContext: string = fs.readFileSync('./assets/context.md', 'utf-8');
 
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
+const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
 const COAST_WEBHOOK_URL: string = process.env.COAST_WEBHOOK_URL || '';
 
 let external_messages = '';
@@ -36,6 +38,21 @@ app.get('/', (req: Request, res: Response): void => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+// Only in dev, Proxy the twilio serverless functions
+// so that they can be ran via ngrok as well via a single port and domain.
+if (process.env.NODE_ENV === 'development') {
+  app.use(
+    '/serverless',
+    createProxyMiddleware({
+      target: `http://localhost:${SERVERLESS_PORT}`,
+      changeOrigin: true,
+      pathRewrite: {
+        '^/serverless': '',
+      },
+    })
+  );
+}
 
 app.get('/text', (req, res) => {
   messageWaiting = true;

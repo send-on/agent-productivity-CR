@@ -25,6 +25,15 @@ async function getEnvironmentVariables(): Promise<Record<string, string>> {
   delete variables.TWILIO_AUTH_TOKEN;
 
   // removing because it's not necessary for the deployed functions
+  if (variables.NGROK_URL) {
+    delete variables.NGROK_URL;
+  }
+
+  if (variables.SERVICE_NAME) {
+    delete variables.NGROK_URL;
+  }
+
+  // removing because it's not necessary for the deployed functions
   if (variables.FUNCTIONS_DOMAIN) {
     delete variables.FUNCTIONS_DOMAIN;
   }
