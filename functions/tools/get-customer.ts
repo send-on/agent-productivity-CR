@@ -7,17 +7,6 @@ const COAST_WEBHOOK_URL = process.env.COAST_WEBHOOK_URL || '';
 
 // Pull customer data and traits from Segment
 async function fetchCustomerProfile(caller) {
-  axios
-    .post(
-      COAST_WEBHOOK_URL,
-      {
-        sender: 'system',
-        type: 'string',
-        message: `Fetching segment profile for ${caller} ...`,
-      },
-      { headers: { 'Content-Type': 'application/json' } }
-    )
-    .catch((err) => console.log(err));
 
   try {
     const URL = `https://profiles.segment.com/v1/spaces/${SEGMENT_SPACE}/collections/users/profiles/phone:${encodeURIComponent(
@@ -34,27 +23,19 @@ async function fetchCustomerProfile(caller) {
     const {
       first_name,
       last_name,
-      customer_type,
-      application_status,
-      home_city,
-      home_address,
-      member_since,
-      last_clicked,
-      fav_sports_team,
-      userId,
+      phone,
+      email,
+      situation_goals,
+      checking_acct_last_4
     } = response?.data?.traits;
 
     const customerData: Record<string, string> = {
-      firstName: first_name,
-      lastName: last_name,
-      customer_type,
-      application_status,
-      home_city,
-      home_address,
-      member_since,
-      last_clicked,
-      fav_sports_team,
-      userId,
+      first_name,
+      last_name,
+      phone,
+      email,
+      situation_goals,
+      checking_acct_last_4
     };
 
     // axios
@@ -86,10 +67,11 @@ async function fetchCustomerProfile(caller) {
 export async function getCustomer(caller) {
   if (caller) {
     const customerData = await fetchCustomerProfile(caller);
-    if (customerData?.firstName) {
-      console.log(`[getCustomer] customer returned:`, customerData);
-    }
-
+    // if (customerData?.first_name) {
+    //   console.log(`[getCustomer] customer returned:`, customerData);
+    // }
+    // console.log('******customerData*****:', customerData);
+    // return {customerData: customerData};
     return customerData;
   }
 
