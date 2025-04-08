@@ -344,8 +344,7 @@ export class GptService extends EventEmitter {
                 {
                   sender: 'system:ortgage_records',
                   type: 'JSON',
-                  // @ts-expect-error
-                  message: updatedRecord.fields,
+                  message: updatedRecord,
                 },
                 { headers: { 'Content-Type': 'application/json' } }
               )
@@ -353,8 +352,7 @@ export class GptService extends EventEmitter {
 
             console.log(
               'Upserted data into mortgage records:',
-              // @ts-expect-error
-              updatedRecord.fields
+              updatedRecord
             );
             this.messages.push({
               role: 'tool',
@@ -389,7 +387,7 @@ export class GptService extends EventEmitter {
                 {
                   sender: 'system:custemer_profile',
                   type: 'JSON',
-                  message: customerData,
+                  message: {customerData:customerData},
                 },
                 { headers: { 'Content-Type': 'application/json' } }
               )
@@ -495,19 +493,18 @@ export class GptService extends EventEmitter {
             last: true,
           };
 
-          // axios
-          //   .post(
-          //     COAST_WEBHOOK_URL,
-          //     {
-          //       sender: 'Conversation Relay Assistant',
-          //       type: 'string',
-          //       message: content,
-          //     },
-          //     { headers: { 'Content-Type': 'application/json' } }
-          //   )
-          //   .catch((err) => console.log(err));
+          axios
+            .post(
+              COAST_WEBHOOK_URL,
+              {
+                sender: 'Conversation Relay Assistant',
+                type: 'string',
+                message: content,
+              },
+              { headers: { 'Content-Type': 'application/json' } }
+            )
+            .catch((err) => console.log(err));
 
-          // console.log(`[GptService] Text Response: ${JSON.stringify(responseContent, null, 4)}`);
           return responseContent;
         }
       } else {

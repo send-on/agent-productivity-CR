@@ -184,7 +184,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
 
           console.log('Fetching customer data for:', message.from);
           const customerData = await getCustomer(message.from);
-          const customerName = customerData?.firstName;
+          const customerName = customerData?.first_name;
 
           let greetingText = customerName
             ? `Greet the customer with name ${customerName} in a friendly manner. Do not constantly use their name, but drop it in occasionally. Tell them that you have to first verify their details before you can proceed to ensure confidentiality of the conversation.`
