@@ -1,18 +1,21 @@
-// import {manifest as getInfoViaTextToolManifest} from './getInfoViaText/manifest';
-
-import { manifest as getCustomerToolManifest } from './getCustomer/manifest';
+import { manifest as getSegmentProfileToolManifest } from './getSegmentProfile/manifest';
 import { manifest as liveAgentHandoffToolManifest } from './liveAgentHandoff/manifest';
-import { manifest as lookupMortgageWithPhoneToolManifest } from './lookupMortgageWithPhone/manifest';
-import { manifest as updateCustomerProfileToolManifest } from './updateCustomerProfile/manifest';
+import { manifest as updateCustomerProfileToolManifest } from './upsertSegmentProfile/manifest';
 import { manifest as upsertMortgageToolManifest } from './upsertMortgage/manifest';
+import { manifest as sendTextToolManifest } from './sendText/manifest';
+import { manifest as getMortgagesToolManifest } from './getMortgages/manifest';
+import { manifest as mortgageCompletionToolManifest } from './mortgageCompletion/manifest';
+import { manifest as setSegmentProfileToolManifest } from './setSegmentProfile/manifest';
 
 export const toolManifest = {
   tools: [
-    getCustomerToolManifest,
+    getMortgagesToolManifest,
+    getSegmentProfileToolManifest,
     liveAgentHandoffToolManifest,
-    lookupMortgageWithPhoneToolManifest,
     updateCustomerProfileToolManifest,
     upsertMortgageToolManifest,
-    // getInfoViaTextToolManifest,
+    sendTextToolManifest,
+    mortgageCompletionToolManifest,
+    setSegmentProfileToolManifest,
   ],
 };

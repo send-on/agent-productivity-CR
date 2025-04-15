@@ -8,22 +8,21 @@ import { WebSocket } from 'ws';
 import axios from 'axios';
 import cors from 'cors';
 import { toolManifest } from './agent/tools/toolManifest';
-import { GptService } from './responseServer/GptService';
-import { getCustomer } from './agent/tools/getCustomer';
+import { GptReturnResponse, GptService } from './responseServer/GptService';
+import { merge as mergeInstructions } from './agent/utils/instructions/merge';
 
 dotenv.config();
 
-const promptContext: string = fs.readFileSync(
-  './agent/instructions/context.md',
-  'utf-8'
-);
+const promptContext = mergeInstructions('./agent/instructions');
 
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
 const COAST_WEBHOOK_URL: string = process.env.COAST_WEBHOOK_URL || '';
 
-let external_messages = '';
-let messageWaiting = false;
+let externalMessage: {
+  body: string;
+  from: string;
+} | null = null;
 
 const { app } = ExpressWs(express());
 app.use(express.urlencoded({ extended: true })).use(express.json());
@@ -57,11 +56,22 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 
+// Used to receive text messages from Twilio about the conversation
 app.get('/text', (req, res) => {
-  messageWaiting = true;
-  external_messages = 'Pull up my loans';
-  console.log('external_messages in GET', external_messages);
-  res.send('text received');
+  const from = req.query.From as string;
+  const bodyMessage = req.query.Body as string;
+
+  if (from && bodyMessage) {
+    console.log('Received message:', bodyMessage);
+    console.log('From:', from);
+    externalMessage = {
+      body: bodyMessage,
+      from: from,
+    };
+    res.send('text received');
+  } else {
+    res.send('Invalid message received');
+  }
 });
 
 app.ws('/conversation-relay', (ws: WebSocket) => {
@@ -69,18 +79,6 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
   let gptService: GptService | null = null;
 
   ws.on('message', async (data: string) => {
-    let gptResponse = '';
-    if (messageWaiting) {
-      console.log('external_messages in ws', external_messages);
-      messageWaiting = !messageWaiting;
-      // @ts-expect-error
-      gptResponse = await gptService.generateResponse(
-        'user',
-        external_messages
-      );
-      ws.send(JSON.stringify(gptResponse));
-    }
-
     try {
       const message = JSON.parse(data);
       console.log(
@@ -90,13 +88,28 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           4
         )}`
       );
-      let gptResponse: any = '';
-
+      let gptResponse: GptReturnResponse;
+      console.log(message.type);
       switch (message.type) {
         case 'info':
           console.debug(
             `[Conversation Relay] info: ${JSON.stringify(message, null, 4)}`
           );
+          // A text message is received from the user
+          if (externalMessage && gptService) {
+            const message = JSON.parse(data);
+            console.log('message in text', message);
+            console.log('external_messages in ws', externalMessage);
+
+            gptResponse = await gptService.generateResponse({
+              role: 'user',
+              prompt:
+                'Received text message with content, upsert the customer mortgage with the appropriate values',
+              externalMessage,
+            });
+            externalMessage = null;
+            ws.send(JSON.stringify(gptResponse));
+          }
           break;
         case 'prompt':
           console.info(
@@ -116,13 +129,10 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             .catch((err) => console.log(err));
 
           if (gptService) {
-            gptResponse = await gptService.generateResponse(
-              'user',
-              message.voicePrompt,
-              messageWaiting,
-              // @ts-expect-error
-              external_messages
-            );
+            gptResponse = await gptService.generateResponse({
+              role: 'user',
+              prompt: message.voicePrompt,
+            });
 
             console.info(
               `[Conversation Relay] Bot Response: ${JSON.stringify(
@@ -138,7 +148,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
                 {
                   sender: 'Conversation Relay Assistant',
                   type: 'string',
-                  message: gptResponse.token,
+                  message: gptResponse?.token ?? '',
                 },
                 { headers: { 'Content-Type': 'application/json' } }
               )
@@ -173,35 +183,19 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           break;
         case 'setup':
           console.log('Initializing GptService with Context and Manifest');
-          console.log('TOOOOOL MANIFEST:', toolManifest);
           gptService = new GptService(promptContext, toolManifest);
 
-          gptService.setCallParameters(
-            message.to,
-            message.from,
-            message.callSid
-          );
+          await gptService.setCallParameters({
+            to: message.to,
+            from: message.from,
+            callSid: message.callSid,
+          });
 
-          console.log('Fetching customer data for:', message.from);
-          const customerData = await getCustomer(message.from);
-          const customerName = customerData?.first_name;
-
-          let greetingText = customerName
-            ? `Greet the customer with name ${customerName} in a friendly manner. Do not constantly use their name, but drop it in occasionally. Tell them that you have to first verify their details before you can proceed to ensure confidentiality of the conversation.`
-            : `Greet the customer in a friendly manner. Tell them that you have to first verify their details before you can proceed to ensure confidentiality of the conversation.`;
-
-          // @ts-expect-error
-          gptResponse = await gptService.generateResponse(
-            'system',
-            greetingText
-          );
-          console.info(
-            `[Conversation Relay] Setup <<<<<<: ${JSON.stringify(
-              gptResponse,
-              null,
-              4
-            )}`
-          );
+          gptResponse = await gptService.generateResponse({
+            role: 'system',
+            prompt:
+              'Using the get-segment-profile tool, get the customer and greet them by name if possible.',
+          });
 
           ws.send(JSON.stringify(gptResponse));
           break;

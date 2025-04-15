@@ -24,7 +24,8 @@
     "functions/**/*",
     "responseServer/**/*",
     "agent/**/*",
-    "server.ts"
+    "server.ts",
+    "agent/utils/airtable/getAirtableRecords.ts"
   ],
   "exclude": [
     "node_modules",
