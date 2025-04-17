@@ -4,6 +4,8 @@
         "NGROK",
         "prequal",
         "taskrouter",
-        "twiml"
+        "twiml",
+        "upserted",
+        "Upserts"
     ]
 }

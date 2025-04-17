@@ -8,8 +8,9 @@ import { WebSocket } from 'ws';
 import axios from 'axios';
 import cors from 'cors';
 import { toolManifest } from './agent/tools/toolManifest';
-import { GptReturnResponse, GptService } from './responseServer/GptService';
-import { merge as mergeInstructions } from './agent/utils/instructions/merge';
+import { GptService } from './responseServer/GptService';
+import { Types } from './typings';
+import { mergeInstructions } from './agent/utils';
 
 dotenv.config();
 
@@ -88,7 +89,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           4
         )}`
       );
-      let gptResponse: GptReturnResponse;
+      let gptResponse: Types.GptReturnResponse;
       console.log(message.type);
       switch (message.type) {
         case 'info':
@@ -183,13 +184,13 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           break;
         case 'setup':
           console.log('Initializing GptService with Context and Manifest');
-          gptService = new GptService(promptContext, toolManifest);
-
-          await gptService.setCallParameters({
-            to: message.to,
-            from: message.from,
+          gptService = new GptService(promptContext, toolManifest, {
+            twilioNumber: message.to,
+            customerNumber: message.from,
             callSid: message.callSid,
           });
+
+          await gptService.notifyCallParameters();
 
           gptResponse = await gptService.generateResponse({
             role: 'system',

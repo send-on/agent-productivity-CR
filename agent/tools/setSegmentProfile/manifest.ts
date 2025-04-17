@@ -1,4 +1,5 @@
-export const manifest = {
+import { ChatCompletionTool } from 'openai/resources/chat/completions';
+export const manifest: ChatCompletionTool = {
   type: 'function',
   function: {
     name: 'set-segment-profile',

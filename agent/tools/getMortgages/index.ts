@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
-import { getAirtableRecords } from '../../utils/airtable/getAirtableRecords';
-import { airtableCols } from '../../utils/airtable/airtableCols';
+import { getAirtableRecords, airtableCols } from '../../utils';
 
 dotenv.config();
 

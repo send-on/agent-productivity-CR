@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { upsertAirtableRecord } from '../../utils/airtable/upsertAirtableRecord';
+import { upsertAirtableRecord } from '../../utils';
 dotenv.config();
 
 type UpsertMortgageParams = {
