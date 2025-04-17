@@ -8,6 +8,26 @@ export namespace Types {
     [key: string]: any;
   }
 
+  /* ---------- Caller Context ---------- */
+  export type IncomingCallParams = {
+    twilioNumber: string;
+    customerNumber: string;
+    callSid: string;
+  };
+
+  export type IncomingExternalMessage = {
+    body: string;
+    from: string;
+  };
+
+  export type CallerContext = {
+    startDate?: Date | null;
+    reason?: 'loan' | 'banking' | null;
+    loanApps?: Record<string, unknown>[] | null;
+    banking?: Record<string, unknown> | null;
+    segment?: Types.SegmentTraits | null;
+  };
+
   /* ---------- Coast ---------- */
   export type SendToCoastParams = {
     sender:
@@ -26,17 +46,14 @@ export namespace Types {
   export type GptGenerateResponse = {
     role: OpenAI.Chat.Completions.ChatCompletionMessageParam['role'];
     prompt: string;
-    externalMessage?: {
-      body: string;
-      from: string;
-    };
+    externalMessage?: IncomingExternalMessage;
   };
 
   export type GptReturnResponse = {
     type: string;
     handoffData?: string;
-    last: boolean;
-    token: string;
+    last?: boolean;
+    token?: string;
   };
 
   export type GptMessageHandlerInput =
@@ -52,21 +69,6 @@ export namespace Types {
 
   export type GptToolManifest = {
     tools: ChatCompletionTool[];
-  };
-
-  /* ---------- Caller Context ---------- */
-  export type IncomingCallParams = {
-    twilioNumber: string;
-    customerNumber: string;
-    callSid: string;
-  };
-
-  export type CallerContext = {
-    startDate?: Date | null;
-    reason?: 'loan' | 'banking' | null;
-    loanApps?: Record<string, unknown>[] | null;
-    banking?: Record<string, unknown> | null;
-    segment?: Types.SegmentTraits | null;
   };
 
   /* ---------- Segment ---------- */

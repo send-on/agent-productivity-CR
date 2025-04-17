@@ -1,6 +1,6 @@
 import VoiceResponse from 'twilio/lib/twiml/VoiceResponse';
 import { ServerlessCallback } from '@twilio-labs/serverless-runtime-types/types';
-import { TwilioContext } from '../../typings';
+import { Types } from '../../typings';
 
 type TwilioEventAgentHandoff = {
   AccountSid: string;
@@ -15,7 +15,7 @@ type TwilioEventAgentHandoff = {
 
 // Twilio Function signature for TypeScript
 exports.handler = function (
-  context: TwilioContext,
+  context: Types.TwilioContext,
   event: TwilioEventAgentHandoff,
   callback: ServerlessCallback
 ) {

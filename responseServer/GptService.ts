@@ -1,14 +1,11 @@
 import OpenAI from 'openai';
 import EventEmitter from 'events';
-import axios from 'axios';
 import dotenv from 'dotenv';
 import { FieldSet, Records } from 'airtable';
 import { toolFunctions, utils, Types } from './imports';
 dotenv.config();
 
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
-const SEGMENT_WRITE_KEY = process.env.SEGMENT_WRITE_KEY || '';
-const SEGMENT_WRITE_KEY_EVENTS = process.env.SEGMENT_WRITE_KEY_EVENTS || '';
 
 export class GptService extends EventEmitter {
   openai: OpenAI;
@@ -19,7 +16,7 @@ export class GptService extends EventEmitter {
   twilioNumber: string;
   customerNumber: string;
   callSid: string;
-  // Setting things to null in caller context  means we tried to look for it initially and its not found.
+  // Setting things to null in caller context means we tried to look for it initially and its not found.
   callerContext: Types.CallerContext;
   constructor(
     promptContext: string,
@@ -27,7 +24,7 @@ export class GptService extends EventEmitter {
     { twilioNumber, customerNumber, callSid }: Types.IncomingCallParams
   ) {
     super();
-    this.openai = new OpenAI(); // Implicitly uses OPENAI_API_KEY
+    this.openai = new OpenAI();
     this.model = OPENAI_MODEL;
     this.temperature = 0.1;
     this.messages = [{ role: 'system', content: promptContext }];
@@ -81,8 +78,7 @@ export class GptService extends EventEmitter {
   }
 
   private async handleToolCalls(
-    toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[],
-    assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage
+    toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]
   ): Promise<void> {
     for (const toolCall of toolCalls) {
       console.log(
@@ -104,9 +100,6 @@ export class GptService extends EventEmitter {
           break;
         case 'upsert-mortgage':
           await this.upsertMortgage(toolCall);
-          break;
-        case 'live-agent-handoff':
-          await this.liveAgentHandoff(toolCall, assistantMessage);
           break;
         case 'send-text':
           await this.sendText(toolCall);
@@ -372,14 +365,27 @@ export class GptService extends EventEmitter {
     });
   }
 
-  // This should be refactored!
   private async liveAgentHandoff(
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall,
-    assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage
+    _assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage
   ) {
-    console.log(
-      `[GptService] Live Agent Handoff tool call: ${toolCall.function.name}`
-    );
+    const createSummary = async () => {
+      const summaryResponse = await this.openai.chat.completions.create({
+        model: this.model,
+        temperature: this.temperature,
+        messages: this.messages,
+        stream: false,
+      });
+
+      return summaryResponse.choices[0]?.message?.content || '';
+    };
+
+    // Complete the live-agent-handoff
+    this.messageHandler({
+      role: 'tool',
+      content: 'Agent handoff ready',
+      toolCall: toolCall,
+    });
 
     await utils
       .sendToCoast({
@@ -389,30 +395,14 @@ export class GptService extends EventEmitter {
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
-    // Complete the live-agent-handoff
-    this.messageHandler({
-      role: 'tool',
-      content: 'agent handoff ready, creating summary of call',
-      toolCall: toolCall,
-    });
-
     const summaryPrompt =
       'Summarize the previous messages in the thread for the purpose of handing the call off to a live call-center agent. Include suggestions for how to engage the customer.';
-
     this.messageHandler({
       role: 'user',
       content: summaryPrompt,
     });
 
-    // Get the summary from the model
-    const summaryResponse = await this.openai.chat.completions.create({
-      model: this.model,
-      temperature: this.temperature,
-      messages: this.messages,
-      stream: false,
-    });
-
-    const summary = summaryResponse.choices[0]?.message?.content || '';
+    const summary = await createSummary();
 
     await utils
       .sendToCoast({
@@ -422,95 +412,13 @@ export class GptService extends EventEmitter {
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
-    let user: string | undefined;
-    console.log('Summary of conversation:', summary);
-
-    async function updateSituationGoals(caller, goals) {
-      const res = await toolFunctions.getSegmentProfile(caller);
-
-      user = res?.userId;
-      if (user) {
-        const segmentBody = {
-          userId: user,
-          traits: { situation_goals: goals },
-          writeKey: SEGMENT_WRITE_KEY,
-        };
-
-        console.log(
-          'updating segment profile with summary:',
-          JSON.stringify(segmentBody)
-        );
-
-        axios
-          .post('https://api.segment.io/v1/identify', segmentBody, {
-            headers: { 'Content-Type': 'application/json' },
-          })
-          .catch((err) => console.log(err));
-
-        return res?.userId;
-      }
-
-      return null;
-    }
-
-    const userId = updateSituationGoals(this.customerNumber, summary);
-
     // After getting the summary, we'll extract the primary topic
     const topicPrompt = `Based on the conversation, what is the primary topic being discussed? Respond with a single phrase or word.`;
-
     this.messages.push({ role: 'user', content: topicPrompt });
-
-    // @ts-ignore
-    const topicResponse = await this.openai.chat.completions.create({
-      model: this.model,
-      temperature: this.temperature,
-      messages: this.messages,
-      stream: false,
-    });
-
-    const primaryTopic =
-      (topicResponse.choices[0]?.message?.content?.trim() ?? '') ||
-      'General Inquiry';
 
     // After getting the summary, we’ll analyze its sentiment using GPT-4.
     const sentimentPrompt = `Analyze the sentiment of the following text and return one of the following values: Positive, Neutral, or Negative.`;
-
     this.messages.push({ role: 'user', content: sentimentPrompt });
-
-    const sentimentResponse = await this.openai.chat.completions.create({
-      model: this.model,
-      temperature: this.temperature,
-      messages: this.messages,
-      stream: false,
-    });
-
-    const sentiment =
-      (sentimentResponse.choices[0]?.message?.content?.trim() ?? '') ||
-      'Neutral';
-
-    // Generate Prequal Call event and associated properties
-    const prequalEvent = {
-      event: 'Prequal Call',
-      userId: user,
-      properties: {
-        primary_topic: primaryTopic, // Dynamic topic extracted from the conversation
-        sentiment: sentiment, // Dynamic sentiment analysis
-        // handle_time: conversationLengthInMinutes.toFixed(2),  // Length of the conversation in minutes
-        // timestamp: conversationStartTimeISO,  // Timestamp of the start of the conversation
-      },
-      writeKey: SEGMENT_WRITE_KEY_EVENTS,
-    };
-
-    console.log('prequalEvent:', JSON.stringify(prequalEvent));
-
-    if (user) {
-      // Send the Prequal Call event to Segment
-      axios
-        .post('https://api.segment.io/v1/track', prequalEvent, {
-          headers: { 'Content-Type': 'application/json' },
-        })
-        .catch((err) => console.log('Error posting Prequal Call event:', err));
-    }
 
     const responseContent = {
       type: 'end',
@@ -519,17 +427,7 @@ export class GptService extends EventEmitter {
         reason: 'Basic information gathered',
         conversationSummary: summary,
       }),
-      last: true,
-      token: assistantMessage?.content || '',
     };
-
-    console.log(
-      `[GptService] Transfer to agent response: ${JSON.stringify(
-        responseContent,
-        null,
-        4
-      )}`
-    );
 
     await utils
       .sendToCoast({
@@ -632,7 +530,12 @@ export class GptService extends EventEmitter {
       const toolCalls = assistantMessage.tool_calls ?? [];
 
       if (toolCalls.length > 0) {
-        await this.handleToolCalls(toolCalls, assistantMessage);
+        // Send the caller to the live agent which requires an end call event afterwards.
+        if (toolCalls[0].function.name === 'live-agent-handoff') {
+          return await this.liveAgentHandoff(toolCalls[0], assistantMessage);
+        }
+
+        await this.handleToolCalls(toolCalls);
 
         const finalResponse = await this.openai.chat.completions.create({
           model: this.model,
@@ -651,6 +554,7 @@ export class GptService extends EventEmitter {
             message: content,
           })
           .catch((err) => console.error('Failed to send to Coast:', err));
+
         return {
           type: 'text',
           token: content,

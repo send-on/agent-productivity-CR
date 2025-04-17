@@ -1,5 +1,4 @@
 import dotenv from 'dotenv';
-import fs from 'fs';
 import express, { Request, Response } from 'express';
 import expressWs from 'express-ws';
 import ExpressWs from 'express-ws';
@@ -20,31 +19,19 @@ const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
 const COAST_WEBHOOK_URL: string = process.env.COAST_WEBHOOK_URL || '';
 
-let externalMessage: {
-  body: string;
-  from: string;
-} | null = null;
+let externalMessage: Types.IncomingExternalMessage | null = null;
 
 const { app } = ExpressWs(express());
-app.use(express.urlencoded({ extended: true })).use(express.json());
 
 // Initialize express-ws
 expressWs(app);
 
-// Enable CORS
-app.use(cors());
-
-app.get('/', (req: Request, res: Response): void => {
-  res.send('WebSocket Server Running');
-});
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
+// THIS MUST COME RIGHT AFTER APP INSTANTIATION
+// otherwise it doesn't works expected
 // Only in dev, Proxy the twilio serverless functions
 // so that they can be ran via ngrok as well via a single port and domain.
 if (process.env.NODE_ENV === 'development') {
+  console.log('Proxying serverless functions');
   app.use(
     '/serverless',
     createProxyMiddleware({
@@ -56,6 +43,17 @@ if (process.env.NODE_ENV === 'development') {
     })
   );
 }
+
+app.use(cors());
+app.use(express.urlencoded({ extended: true })).use(express.json());
+
+app.get('/', (_req: Request, res: Response): void => {
+  res.send('WebSocket Server Running');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 // Used to receive text messages from Twilio about the conversation
 app.get('/text', (req, res) => {

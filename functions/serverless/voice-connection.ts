@@ -1,10 +1,10 @@
 import twilio from 'twilio';
 import { ServerlessCallback } from '@twilio-labs/serverless-runtime-types/types';
 import VoiceResponse from 'twilio/lib/twiml/VoiceResponse';
-import { TwilioContext } from 'typings';
+import { Types } from 'typings';
 
 exports.handler = async function (
-  context: TwilioContext,
+  context: Types.TwilioContext,
   _event: Record<string, unknown>,
   callback: ServerlessCallback
 ) {
