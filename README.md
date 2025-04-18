@@ -34,7 +34,8 @@ At the root of the package run `npm run deploy` which will add all your content 
    2. Start the Twilio serverless functions (default port 3000).
    3. Start the express server for the conversation relay (default port 3001).
 5. Start forwarding via ngrok `ngrok http --domain <your-ngrok-domain> 3001`
-6. You can optionally open up `http://localhost:4040/inspect/http` to see any ngrok requests made.
+6. You can start an outbound call by triggering the serverless function found at `functions/serverless/outbound-connection.ts`, just make a post request to this as instructed in the file (to simulate the agent calling you).
+7. You can optionally open up `http://localhost:4040/inspect/http` to see any ngrok requests made.
 
 
 ### WebSocket Connection Flow
@@ -48,12 +49,12 @@ At the root of the package run `npm run deploy` which will add all your content 
 
 3. The server then:
    - Stores the call parameters for the session
-   - Makes a request to the `get-customer` function with the caller's phone number
+   - Makes a request to the `get-segment-profile` function with the caller's phone number
    - Receives customer details (including first name)
    - Uses this information to generate a personalized greeting
    - Initiates the instructions from context.md
 
-4. The `get-customer` function:
+4. The `get-segment-profile` function:
    - Receives the caller's phone number
    - Looks up customer information
    - Returns customer details for personalization
@@ -80,7 +81,7 @@ Key sections to configure:
 
 Located in `assets/toolManifest.json`, this file defines the available tools for the GPT service:
 
-1. `get-customer`
+1. `get-segment-profile`
    - Retrieves customer details using caller's phone number
    - Required parameter: `from` (phone number)
 

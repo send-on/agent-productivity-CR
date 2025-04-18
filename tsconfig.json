@@ -24,7 +24,8 @@
     "functions/**/*",
     "responseServer/**/*",
     "agent/**/*",
-    "server.ts"
+    "server.ts",
+    "agent/**/*",
   ],
   "exclude": [
     "node_modules",
