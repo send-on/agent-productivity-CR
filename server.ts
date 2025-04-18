@@ -8,6 +8,7 @@ import axios from 'axios';
 import cors from 'cors';
 import { toolManifest } from './agent/tools/toolManifest';
 import { GptService } from './responseServer/GptService';
+import { resolveInitialCallInfo } from './agent/utils';
 import { Types } from './typings';
 import { mergeInstructions } from './agent/utils';
 
@@ -182,18 +183,20 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           break;
         case 'setup':
           console.log('Initializing GptService with Context and Manifest');
-          gptService = new GptService(promptContext, toolManifest, {
-            twilioNumber: message.to,
-            customerNumber: message.from,
-            callSid: message.callSid,
+
+          const { to, from, callSid } = message;
+          const initialCallInfo = resolveInitialCallInfo({ to, from, callSid });
+          gptService = new GptService({
+            promptContext,
+            toolManifest,
+            initialCallInfo,
           });
 
-          await gptService.notifyCallParameters();
+          await gptService.notifyInitialCallParams();
 
           gptResponse = await gptService.generateResponse({
             role: 'system',
-            prompt:
-              'Using the get-segment-profile tool, get the customer and greet them by name if possible.',
+            prompt: `use the # Call Start context to start the conversation`,
           });
 
           ws.send(JSON.stringify(gptResponse));

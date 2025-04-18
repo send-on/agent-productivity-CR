@@ -3,21 +3,22 @@ import { ChatCompletionTool } from 'openai/resources/chat/completions';
 import OpenAI from 'openai';
 
 export namespace Types {
-  /* ---------- Twilio ---------- */
+  /* ---------------- Twilio ---------------- */
   export interface TwilioContext extends BaseTwilioContext {
     [key: string]: any;
   }
 
-  /* ---------- Caller Context ---------- */
-  export type IncomingCallParams = {
-    twilioNumber: string;
-    customerNumber: string;
-    callSid: string;
-  };
-
   export type IncomingExternalMessage = {
     body: string;
     from: string;
+  };
+
+  export type InitialCallInfo = {
+    twilioNumber: string;
+    customerNumber: string;
+    callSid: string;
+    direction: 'inbound' | 'outbound' | 'unknown';
+    inReference: 'loan' | 'banking' | 'unknown';
   };
 
   export type CallerContext = {
@@ -25,24 +26,20 @@ export namespace Types {
     reason?: 'loan' | 'banking' | null;
     loanApps?: Record<string, unknown>[] | null;
     banking?: Record<string, unknown> | null;
-    segment?: Types.SegmentTraits | null;
+    segment?: SegmentTraits | null;
   };
 
-  /* ---------- Coast ---------- */
-  export type SendToCoastParams = {
-    sender:
-      | 'system:tool'
-      | 'begin'
-      | 'system:ai_summary'
-      | 'system:mortgage_records'
-      | 'system:updated_traits'
-      | 'system:customer_profile'
-      | 'Conversation Relay Assistant';
-    type: 'string' | 'JSON';
-    message: unknown;
+  /* ---------------- GPT ---------------- */
+  export type GptToolManifest = {
+    tools: ChatCompletionTool[];
   };
 
-  /* ---------- GPT ---------- */
+  export type GptServiceConstructorProps = {
+    promptContext: string;
+    toolManifest: GptToolManifest;
+    initialCallInfo: InitialCallInfo;
+  };
+
   export type GptGenerateResponse = {
     role: OpenAI.Chat.Completions.ChatCompletionMessageParam['role'];
     prompt: string;
@@ -67,11 +64,7 @@ export namespace Types {
         toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall;
       };
 
-  export type GptToolManifest = {
-    tools: ChatCompletionTool[];
-  };
-
-  /* ---------- Segment ---------- */
+  /* ---------------- Segment ---------------- */
   export type SegmentTraits = {
     first_name?: string;
     last_name?: string;
@@ -83,5 +76,19 @@ export namespace Types {
 
   export type SegmentResponse = {
     traits: SegmentTraits;
+  };
+
+  /* ---------------- Coast ---------------- */
+  export type SendToCoastParams = {
+    sender:
+      | 'system:tool'
+      | 'begin'
+      | 'system:ai_summary'
+      | 'system:mortgage_records'
+      | 'system:updated_traits'
+      | 'system:customer_profile'
+      | 'Conversation Relay Assistant';
+    type: 'string' | 'JSON';
+    message: unknown;
   };
 }

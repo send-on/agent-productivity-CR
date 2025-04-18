@@ -13,29 +13,30 @@ export class GptService extends EventEmitter {
   temperature: number;
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[];
   toolManifest: Types.GptToolManifest;
-  twilioNumber: string;
-  customerNumber: string;
-  callSid: string;
+  twilioNumber!: string;
+  customerNumber!: string;
+  callSid!: string;
+  direction!: Types.InitialCallInfo['direction'];
+  inReference!: Types.InitialCallInfo['inReference'];
   // Setting things to null in caller context means we tried to look for it initially and its not found.
   callerContext: Types.CallerContext;
-  constructor(
-    promptContext: string,
-    toolManifest: Types.GptToolManifest,
-    { twilioNumber, customerNumber, callSid }: Types.IncomingCallParams
-  ) {
+  constructor({
+    promptContext,
+    toolManifest,
+    initialCallInfo,
+  }: Types.GptServiceConstructorProps) {
     super();
     this.openai = new OpenAI();
     this.model = OPENAI_MODEL;
     this.temperature = 0.1;
     this.messages = [{ role: 'system', content: promptContext }];
     this.toolManifest = toolManifest;
-    this.twilioNumber = twilioNumber;
-    this.customerNumber = customerNumber;
-    this.callSid = callSid;
     this.callerContext = {};
+
+    Object.assign(this, initialCallInfo);
   }
 
-  public async notifyCallParameters() {
+  public async notifyInitialCallParams() {
     await utils
       .sendToCoast({
         sender: 'begin',
@@ -54,7 +55,12 @@ export class GptService extends EventEmitter {
     the callSid is ${this.callSid} and the number to send SMSs from is: ${this.twilioNumber}. 
     Use this information throughout as the reference when calling any of the tools. 
     Specifically use the callSid when you use the "transfer-to-agent" tool to transfer the call to the agent.
-    Do not forget to include the + in the phone number`;
+    Do not forget to include the + in the phone number!
+    The call direction is ${this.direction} call with the customer 
+    The call reference is ${this.inReference}.
+    `;
+
+    console.log(content);
 
     this.messageHandler({
       role: 'system',
@@ -92,7 +98,7 @@ export class GptService extends EventEmitter {
         case 'set-segment-profile':
           await this.setSegmentProfile(toolCall);
           break;
-        case 'update-customer-profile':
+        case 'upsert-segment-profile':
           await this.upsertSegmentProfile(toolCall);
           break;
         case 'get-mortgages':
@@ -325,7 +331,8 @@ export class GptService extends EventEmitter {
     } else {
       content = `## Loan Application Updates ${JSON.stringify(updatedRecord)}
       The customer has completed the loan application and we can proceed to the next step.
-      You MUST now call the 'mortgage-completion' tool to complete the application.
+      Ask the customer if they would like you to submit the loan application for them 
+      or send them a link to review everything online by calling the tool 'mortgage-completion'.
       `;
     }
 

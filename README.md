@@ -34,7 +34,8 @@ At the root of the package run `npm run deploy` which will add all your content 
    2. Start the Twilio serverless functions (default port 3000).
    3. Start the express server for the conversation relay (default port 3001).
 5. Start forwarding via ngrok `ngrok http --domain <your-ngrok-domain> 3001`
-6. You can optionally open up `http://localhost:4040/inspect/http` to see any ngrok requests made.
+6. You can start an outbound call by triggering the serverless function found at `functions/serverless/outbound-connection.ts`, just make a post request to this as instructed in the file (to simulate the agent calling you).
+7. You can optionally open up `http://localhost:4040/inspect/http` to see any ngrok requests made.
 
 
 ### WebSocket Connection Flow
