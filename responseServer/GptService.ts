@@ -165,6 +165,7 @@ export class GptService extends EventEmitter {
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ) {
     const args = JSON.parse(toolCall.function.arguments);
+    console.log('upsertSegmentProfile called', args)
 
     await utils
       .sendToCoast({
@@ -179,7 +180,7 @@ export class GptService extends EventEmitter {
     let newTraits = args.traits || {};
     delete newTraits.userId;
 
-    if (args.userId) {
+    if (args) {
       await toolFunctions.upsertSegmentProfile(args);
 
       await utils
