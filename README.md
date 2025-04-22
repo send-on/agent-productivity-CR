@@ -59,13 +59,18 @@ At the root of the package run `npm run deploy` which will add all your content 
    - Looks up customer information
    - Returns customer details for personalization
 
+5. The `get-mortgages` function:
+   - Receives the caller's phone number or email as the query field and value
+   - Looks up customer information
+   - Returns customer details for any loans found
+
 ## GPT Context Configuration
 
 The server uses two key files to configure the GPT conversation context:
 
-### context.md
+### Context / Instructions
 
-Located in `/assets/context.md`, this file defines:
+Located in `agent/instructions/**/*`, this file defines:
 - The AI assistant's persona
 - Conversation style guidelines
 - Response formatting rules
@@ -77,38 +82,28 @@ Key sections to configure:
 3. Response Guidelines - Specify formatting and delivery rules
 4. Instructions - Detail specific process steps and when one of tools below should be used
 
-### toolManifest.json
+This all then gets merged using the merge function found in `agent/utils/instructions/merge.ts`.
 
-Located in `assets/toolManifest.json`, this file defines the available tools for the GPT service:
+### Tools
 
-1. `get-segment-profile`
-   - Retrieves customer details using caller's phone number
-   - Required parameter: `from` (phone number)
+Located in `agent/tools/tooFunctions.ts`, this file defines the functions used in the tools for the GPT service:
+Located in `agent/tools/toolManifest.ts`, this file defines the json schema for tools set on the GPT service:
 
-2. `update-customer-profile`
-   - Updates the customer's profile in Segment with properties that can be customized for your use case and gathered by the gpt
-   - Required parameters: `userId`
-
-3. `live-agent-handoff`
-   - Transfers call to human agent
-   - Required parameter: `callSid`
-
-The server fetches both files during initialization to hydrate the GPT context and enable tool usage during conversations.
 
 ### Running the Server
 
-1. Ensure you are in the conversation-relay folder and then install the depencencies
+1. Ensure you are in the conversation-relay folder and then install the dependencies
 
 ```bash
 pnpm install
 ```
 
-3. Start the local server:
+2. Start the local server:
 ```bash
 pnpm dev
 ```
 
-4. Open a new terminal window and expose the local server to the internet using ngrok:
+3. Open a new terminal window and expose the local server to the internet using ngrok:
 ```bash
 ngrok http --domain <your-ngrok-domain> 3001
 
