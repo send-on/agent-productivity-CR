@@ -36,7 +36,7 @@ async function deploy() {
     const result = await deployFunctions(serverlessClient);
 
     console.log('Step 3: Assign Phone Number...');
-    await assignPhoneNumber(client);
+    await assignPhoneNumber(client, result.domain);
 
     const variables = {
       TWILIO_SMS_FROM_NUMBER: process.env.TWILIO_SMS_FROM_NUMBER,

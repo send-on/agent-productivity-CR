@@ -3,8 +3,8 @@ import { updateEnvFile } from '../helpers/updateEnvFile';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export async function assignPhoneNumber(client: Twilio) {
-  const functionsDomain = process.env.FUNCTIONS_DOMAIN;
+export async function assignPhoneNumber(client: Twilio, domain?: string) {
+  const functionsDomain = domain ?? process.env.FUNCTIONS_DOMAIN;
   let conversationNumber = process.env.TWILIO_CONVERSATION_NUMBER;
 
   try {
