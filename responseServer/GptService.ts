@@ -238,7 +238,7 @@ export class GptService extends EventEmitter {
       .sendToCoast({
         sender: 'system:mortgage_records',
         type: 'JSON',
-        message: JSON.stringify(mortgages),
+        message: mortgages,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -488,7 +488,18 @@ export class GptService extends EventEmitter {
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
-    await toolFunctions.mortgageCompletion(args);
+    const response = await toolFunctions.mortgageCompletion(args);
+    console.log('response', response)
+
+    await utils
+      .sendToCoast({
+        sender: 'system:message',
+        type: 'JSON',
+        message: response?.data,
+      })
+      .catch((err) => console.error('Failed to send to Coast:', err));
+    
+
 
     this.messageHandler({
       role: 'tool',
@@ -574,12 +585,12 @@ export class GptService extends EventEmitter {
       this.messages.push({ role: 'assistant', content });
 
       await utils
-        .sendToCoast({
-          sender: 'Conversation Relay Assistant',
-          type: 'string',
-          message: JSON.stringify(content),
-        })
-        .catch((err) => console.error('Failed to send to Coast:', err));
+          .sendToCoast({
+            sender: 'Conversation Relay Assistant',
+            type: 'string',
+            message: content,
+          })
+          .catch((err) => console.error('Failed to send to Coast:', err));
 
       return {
         type: 'text',

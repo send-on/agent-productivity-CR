@@ -27,8 +27,9 @@
     "fs": "^0.0.1-security",
     "http-proxy-middleware": "^3.0.3",
     "openai": "^4.20.1",
+    "tsc": "^2.0.4",
     "twilio": "^5.3.6",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

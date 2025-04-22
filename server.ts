@@ -142,17 +142,6 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
               )}`
             );
 
-            axios
-              .post(
-                COAST_WEBHOOK_URL,
-                {
-                  sender: 'Conversation Relay Assistant',
-                  type: 'string',
-                  message: gptResponse?.token ?? '',
-                },
-                { headers: { 'Content-Type': 'application/json' } }
-              )
-              .catch((err) => console.log(err));
             ws.send(JSON.stringify(gptResponse));
           }
           break;

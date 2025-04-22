@@ -87,6 +87,7 @@ export namespace Types {
       | 'system:mortgage_records'
       | 'system:updated_traits'
       | 'system:customer_profile'
+      | 'system:message'
       | 'Conversation Relay Assistant';
     type: 'string' | 'JSON';
     message: unknown;

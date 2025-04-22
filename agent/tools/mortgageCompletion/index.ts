@@ -24,7 +24,7 @@ export async function mortgageCompletion({
   console.log(body);
 
   try {
-    await axios.post(`${baseUrl}${sendSmsRoute}`, {
+    const response = await axios.post(`${baseUrl}${sendSmsRoute}`, {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -33,6 +33,7 @@ export async function mortgageCompletion({
       },
       body,
     });
+    return response;
   } catch (err) {
     if (err instanceof Error) {
       console.error('Error in function:', err.message);
