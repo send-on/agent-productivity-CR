@@ -24,7 +24,7 @@ export async function sendText(to: string, missing: []) {
     console.log(missing);
 
     const result = await client.messages.create({
-      body: `Hello! We are missing the following information from you: ${missing.join(
+      body: `Hello! We need the following information from you: ${missing.join(
         ', '
       )}. Please provide this information at your earliest convenience. Thank you!`,
       from,

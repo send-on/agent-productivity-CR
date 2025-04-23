@@ -17,7 +17,7 @@ export class GptService extends EventEmitter {
   customerNumber!: string;
   callSid!: string;
   direction!: Types.InitialCallInfo['direction'];
-  inReference!: Types.InitialCallInfo['inReference'];
+  callReason!: Types.InitialCallInfo['callReason'];
   // Setting things to null in caller context means we tried to look for it initially and its not found.
   callerContext: Types.CallerContext;
   constructor({
@@ -45,22 +45,17 @@ export class GptService extends EventEmitter {
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
-    console.log(
-      `[GptService] Call to: ${this.twilioNumber} 
-      from: ${this.customerNumber} 
-      with call SID: ${this.callSid}`
-    );
-
     const content = `The customer phone number or "from" number is ${this.customerNumber}, 
     the callSid is ${this.callSid} and the number to send SMSs from is: ${this.twilioNumber}. 
     Use this information throughout as the reference when calling any of the tools. 
     Specifically use the callSid when you use the "transfer-to-agent" tool to transfer the call to the agent.
-    Do not forget to include the + in the phone number!
-    The call direction is ${this.direction} call with the customer 
-    The call reference is ${this.inReference}.
+    Do not forget to include the + in the phone number!.
     `;
 
-    console.log(content);
+    console.log(
+      `[GptService] Call to: notifyInitialCallParams
+      ${content}`
+    );
 
     this.messageHandler({
       role: 'system',
@@ -140,7 +135,7 @@ export class GptService extends EventEmitter {
       this.customerNumber
     );
 
-    this.callerContext.segment ??= customerData;
+    // this.callerContext.segment ??= customerData;
 
     console.log(
       `[GptService] getCustomer Tool response: ${JSON.stringify(customerData)}`
@@ -363,7 +358,7 @@ export class GptService extends EventEmitter {
       ...segmentProfile,
     });
 
-    this.callerContext.segment ??= segmentProfile;
+    //this.callerContext.segment ??= segmentProfile;
 
     this.messageHandler({
       role: 'tool',
@@ -489,7 +484,7 @@ export class GptService extends EventEmitter {
       .catch((err) => console.error('Failed to send to Coast:', err));
 
     const response = await toolFunctions.mortgageCompletion(args);
-    console.log('response', response)
+    console.log('response', response);
 
     await utils
       .sendToCoast({
@@ -498,8 +493,6 @@ export class GptService extends EventEmitter {
         message: response?.data,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
-    
-
 
     this.messageHandler({
       role: 'tool',
@@ -585,12 +578,12 @@ export class GptService extends EventEmitter {
       this.messages.push({ role: 'assistant', content });
 
       await utils
-          .sendToCoast({
-            sender: 'Conversation Relay Assistant',
-            type: 'string',
-            message: content,
-          })
-          .catch((err) => console.error('Failed to send to Coast:', err));
+        .sendToCoast({
+          sender: 'Conversation Relay Assistant',
+          type: 'string',
+          message: content,
+        })
+        .catch((err) => console.error('Failed to send to Coast:', err));
 
       return {
         type: 'text',

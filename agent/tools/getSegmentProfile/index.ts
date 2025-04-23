@@ -14,8 +14,6 @@ export async function getSegmentProfile(
     const encodedPhone = encodeURIComponent(phoneNumber);
     const URL = `https://profiles.segment.com/v1/spaces/${SEGMENT_SPACE}/collections/users/profiles/phone:${encodedPhone}/traits?limit=200`;
 
-    console.log('URL:', URL);
-
     const response = await axios.get<Types.SegmentResponse>(URL, {
       auth: {
         username: SEGMENT_TOKEN,

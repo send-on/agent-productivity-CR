@@ -1,14 +1,32 @@
 import twilio from 'twilio';
 import { ServerlessCallback } from '@twilio-labs/serverless-runtime-types/types';
 import VoiceResponse from 'twilio/lib/twiml/VoiceResponse';
+import dotenv from 'dotenv';
 import { Types } from 'typings';
+import { getSegmentProfile } from '../../agent/tools/getSegmentProfile';
+import { getMortgages } from '../../agent/tools/getMortgages';
+
+dotenv.config();
+
+type TwilioEventVoiceConnection = {
+  To: string;
+  From: string;
+  callReason?: string;
+  Direction: string;
+};
 
 exports.handler = async function (
   context: Types.TwilioContext,
-  _event: Record<string, unknown>,
+  event: TwilioEventVoiceConnection,
   callback: ServerlessCallback
 ) {
   try {
+    const { To, From, Direction, callReason } = event;
+
+    const customerNumber = Direction.includes('outbound') ? To : From;
+    // Get segment profile to try and have their name found for the agent
+    const segmentProfile = await getSegmentProfile(customerNumber);
+
     // Create TwiML response
     const response = new twilio.twiml.VoiceResponse();
 
@@ -17,15 +35,15 @@ exports.handler = async function (
     // Can set this to false here if you want to test production endpoints locally.
     const isDevelopment = !!process.env.NGROK_URL;
 
-    const agentHandoff = 'agent-handoff';
+    const agentHandoffRoute = 'agent-handoff';
     let actionUrl = isDevelopment
-      ? `https://${process.env.NGROK_URL}/serverless/${agentHandoff}`
-      : `https://${context.DOMAIN_NAME}/${agentHandoff}`;
+      ? `https://${process.env.NGROK_URL}/serverless/${agentHandoffRoute}`
+      : `https://${context.DOMAIN_NAME}/${agentHandoffRoute}`;
 
-    const conversationRelay = 'conversation-relay';
+    const conversationRelayRoute = 'conversation-relay';
     const relayUrl = isDevelopment
-      ? `wss://${process.env.NGROK_URL}/${conversationRelay}`
-      : `wss://${context.LIVE_HOST_URL}/${conversationRelay}`;
+      ? `wss://${process.env.NGROK_URL}/${conversationRelayRoute}`
+      : `wss://${context.LIVE_HOST_URL}/${conversationRelayRoute}`;
 
     console.log('actionUrl', actionUrl);
     console.log('relayUrl', relayUrl);
@@ -37,16 +55,46 @@ exports.handler = async function (
       action: actionUrl,
     });
 
+    const conversationRelay = connect.conversationRelay({
+      url: relayUrl, // Your WebSocket URL
+    });
+
     // Define parameters for the ConversationRelay
     const conversationRelayParams: VoiceResponse.ConversationRelayAttributes = {
-      url: relayUrl, // Your WebSocket URL
       voice: 'g6xIsTj2HwM6VR4iXFCw', // Twilio voice ID
       transcriptionProvider: 'deepgram', // Transcription provider
       ttsProvider: 'Elevenlabs', // Text-to-Speech provider
       dtmfDetection: true, // DTMF detection enabled
       interruptByDtmf: true, // Interrupt by DTMF enabled
       debug: true, // Debugging enabled
+      welcomeGreeting: 'Hi! Ask me anything!',
     };
+
+    if (segmentProfile) {
+      conversationRelay.parameter({
+        name: 'segmentProfile',
+        value: JSON.stringify(segmentProfile),
+      });
+    }
+
+    if (callReason) {
+      conversationRelay.parameter({
+        name: 'callReason',
+        value: callReason,
+      });
+    }
+
+    const loans = await getMortgages({
+      queryField: 'phone',
+      queryValue: customerNumber,
+    });
+
+    if (loans) {
+      conversationRelay.parameter({
+        name: 'loans',
+        value: JSON.stringify(loans),
+      });
+    }
 
     // Add the <ConversationRelay> element within <Connect>
     connect.conversationRelay(conversationRelayParams);

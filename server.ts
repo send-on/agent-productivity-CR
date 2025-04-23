@@ -95,6 +95,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           console.debug(
             `[Conversation Relay] info: ${JSON.stringify(message, null, 4)}`
           );
+          console.log('INSIDE HEREE');
           // A text message is received from the user
           if (externalMessage && gptService) {
             const message = JSON.parse(data);
@@ -171,10 +172,20 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           console.debug(`[Conversation Relay] DTMF: ${message.digits?.digit}`);
           break;
         case 'setup':
-          console.log('Initializing GptService with Context and Manifest');
+          const { to, from, callSid, direction, customParameters } = message;
+          const segmentProfile =
+            customParameters['segmentProfile'] ?? 'unknown';
 
-          const { to, from, callSid } = message;
-          const initialCallInfo = resolveInitialCallInfo({ to, from, callSid });
+          const loans = customParameters['loans'] ?? 'unknown';
+
+          const initialCallInfo = resolveInitialCallInfo({
+            to,
+            from,
+            callSid,
+            direction,
+            callReason: customParameters['callReason'],
+          });
+
           gptService = new GptService({
             promptContext,
             toolManifest,
@@ -183,9 +194,25 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
 
           await gptService.notifyInitialCallParams();
 
+          let prompt = `use the # Call Start context to start the conversation.
+          The call direction is ${
+            initialCallInfo.direction
+          } call with the customer 
+          The call reference is ${initialCallInfo.callReason}
+          The segment profile is ${JSON.stringify(segmentProfile)}.
+          The customer has the following mortgage loan applications: ${JSON.stringify(
+            loans
+          )}`;
+
+          if (customParameters['loans']) {
+            prompt += `The customer has the following mortgage loan applications: ${JSON.stringify(
+              loans
+            )}`;
+          }
+
           gptResponse = await gptService.generateResponse({
             role: 'system',
-            prompt: `use the # Call Start context to start the conversation`,
+            prompt,
           });
 
           ws.send(JSON.stringify(gptResponse));

@@ -10,7 +10,7 @@ import { Types } from '../../typings';
 
 export const toolManifest: Types.GptToolManifest = {
   tools: [
-    getMortgagesToolManifest,
+    // getMortgagesToolManifest,
     getSegmentProfileToolManifest,
     liveAgentHandoffToolManifest,
     updateCustomerProfileToolManifest,

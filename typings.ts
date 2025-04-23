@@ -17,8 +17,8 @@ export namespace Types {
     twilioNumber: string;
     customerNumber: string;
     callSid: string;
-    direction: 'inbound' | 'outbound' | 'unknown';
-    inReference: 'loan' | 'banking' | 'unknown';
+    direction: 'inbound' | '"outbound-api';
+    callReason: 'loan' | 'banking' | 'unknown';
   };
 
   export type CallerContext = {
