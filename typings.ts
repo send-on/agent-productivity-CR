@@ -17,12 +17,16 @@ export namespace Types {
     twilioNumber: string;
     customerNumber: string;
     callSid: string;
-    direction: 'inbound' | '"outbound-api';
+    direction: 'inbound' | 'outbound-api';
     callReason: 'loan' | 'banking' | 'unknown';
   };
 
   export type CallerContext = {
     startDate?: Date | null;
+    validation: {
+      isRequired: boolean;
+      isValidated: boolean;
+    };
     reason?: 'loan' | 'banking' | null;
     loanApps?: Record<string, unknown>[] | null;
     banking?: Record<string, unknown> | null;

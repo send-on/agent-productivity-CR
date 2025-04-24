@@ -31,7 +31,12 @@ export class GptService extends EventEmitter {
     this.temperature = 0.1;
     this.messages = [{ role: 'system', content: promptContext }];
     this.toolManifest = toolManifest;
-    this.callerContext = {};
+    this.callerContext = {
+      validation: {
+        isRequired: false,
+        isValidated: false,
+      },
+    };
 
     Object.assign(this, initialCallInfo);
   }
@@ -87,6 +92,9 @@ export class GptService extends EventEmitter {
       );
 
       switch (toolCall.function.name) {
+        case 'authenticate-user':
+          await this.authenticateUser(toolCall);
+          break;
         case 'get-segment-profile':
           await this.getSegmentProfile(toolCall);
           break;
@@ -116,6 +124,40 @@ export class GptService extends EventEmitter {
           });
       }
     }
+  }
+
+  private async authenticateUser(
+    toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
+  ) {
+    const args = JSON.parse(toolCall.function.arguments);
+    console.log('args for authenticate user:', args);
+
+    await utils
+      .sendToCoast({
+        sender: 'system:tool',
+        type: 'string',
+        message: `Calling authenticate-user to validate the user ${JSON.stringify(
+          args
+        )}`,
+      })
+      .catch((err) => console.error('Failed to send to Coast:', err));
+
+    const isValidated = await toolFunctions.authenticateUser(args);
+    this.callerContext.validation.isValidated = isValidated;
+
+    await utils
+      .sendToCoast({
+        sender: 'system:tool',
+        type: 'string',
+        message: `User validation status: ${isValidated}`,
+      })
+      .catch((err) => console.error('Failed to send to Coast:', err));
+
+    this.messageHandler({
+      role: 'tool',
+      content: `User validation status: ${isValidated}`,
+      toolCall,
+    });
   }
 
   private async getSegmentProfile(

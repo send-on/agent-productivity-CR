@@ -10,9 +10,11 @@ import {
   upsertSegmentProfile,
   mortgageCompletion,
   setSegmentProfile,
+  authenticateUser,
 } from '../agent/tools/toolFunctions';
 
 export const toolFunctions = {
+  authenticateUser,
   getSegmentProfile,
   upsertMortgage,
   sendText,

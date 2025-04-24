@@ -55,20 +55,16 @@ exports.handler = async function (
       action: actionUrl,
     });
 
-    const conversationRelay = connect.conversationRelay({
-      url: relayUrl, // Your WebSocket URL
-    });
-
     // Define parameters for the ConversationRelay
-    const conversationRelayParams: VoiceResponse.ConversationRelayAttributes = {
+    const conversationRelay = connect.conversationRelay({
       voice: 'g6xIsTj2HwM6VR4iXFCw', // Twilio voice ID
       transcriptionProvider: 'deepgram', // Transcription provider
       ttsProvider: 'Elevenlabs', // Text-to-Speech provider
       dtmfDetection: true, // DTMF detection enabled
       interruptByDtmf: true, // Interrupt by DTMF enabled
       debug: true, // Debugging enabled
-      welcomeGreeting: 'Hi! Ask me anything!',
-    };
+      url: relayUrl, // Your WebSocket URL
+    });
 
     if (segmentProfile) {
       conversationRelay.parameter({
@@ -96,9 +92,7 @@ exports.handler = async function (
       });
     }
 
-    // Add the <ConversationRelay> element within <Connect>
-    connect.conversationRelay(conversationRelayParams);
-
+    console.log('RESP: ', response.toString());
     // Return the generated TwiML response
     callback(null, response.toString());
   } catch (error) {

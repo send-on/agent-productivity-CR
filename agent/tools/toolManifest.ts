@@ -6,11 +6,13 @@ import { manifest as sendTextToolManifest } from './sendText/manifest';
 import { manifest as getMortgagesToolManifest } from './getMortgages/manifest';
 import { manifest as mortgageCompletionToolManifest } from './mortgageCompletion/manifest';
 import { manifest as setSegmentProfileToolManifest } from './setSegmentProfile/manifest';
+import { manifest as authenticateUserToolManifest } from './authenticateUser/manifest';
 import { Types } from '../../typings';
 
 export const toolManifest: Types.GptToolManifest = {
   tools: [
     // getMortgagesToolManifest,
+    authenticateUserToolManifest,
     getSegmentProfileToolManifest,
     liveAgentHandoffToolManifest,
     updateCustomerProfileToolManifest,

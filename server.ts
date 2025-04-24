@@ -95,19 +95,27 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           console.debug(
             `[Conversation Relay] info: ${JSON.stringify(message, null, 4)}`
           );
-          console.log('INSIDE HEREE');
           // A text message is received from the user
           if (externalMessage && gptService) {
             const message = JSON.parse(data);
+            let prompt = '';
             console.log('message in text', message);
             console.log('external_messages in ws', externalMessage);
 
+            if (gptService.callerContext.validation.isRequired) {
+              prompt = 'Received text message for user authentication';
+            } else {
+              prompt =
+                'Received text message with content, upsert the customer mortgage with the appropriate values';
+            }
+
             gptResponse = await gptService.generateResponse({
               role: 'user',
-              prompt:
-                'Received text message with content, upsert the customer mortgage with the appropriate values',
+              prompt,
               externalMessage,
             });
+
+            // reset the message to null afterwards
             externalMessage = null;
             ws.send(JSON.stringify(gptResponse));
           }
@@ -191,6 +199,10 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             toolManifest,
             initialCallInfo,
           });
+
+          if (initialCallInfo.direction === 'outbound-api') {
+            gptService.callerContext.validation.isRequired = true;
+          }
 
           await gptService.notifyInitialCallParams();
 
