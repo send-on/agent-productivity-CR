@@ -1,3 +1,4 @@
+// REMOVE ME AFTER WE GET RCS WORKING
 import axios from 'axios';
 
 type MortgageCompletionParams = {
@@ -16,7 +17,7 @@ export async function mortgageCompletion({
   console.log({ to, loan_application_id });
 
   const body = {
-    content_sid: 'HX1e6d69ffa20c4d6a0461b6945074c309', // SHOULD SWAP THIS TO ENV VAR ONCE WE CREATE THIS IN THE SERVERLESS DEPLOYMENT
+    content_sid: 'HX1e6d69ffa20c4d6a0461b6945074c309', // SHOULD SWAP THIS TO ENV VAR ONCE WE CREATE THIS IN THE SERVRLESS DEPLOYMENT
     message: 'Your mortgage application is complete.',
     loan_application_id,
     to,
@@ -44,3 +45,8 @@ export async function mortgageCompletion({
     return null;
   }
 }
+
+mortgageCompletion({
+  loan_application_id: 'c7f57342-8154-4432-2651-615baa964daa_1745261587323',
+  to: 'phone_number',
+});

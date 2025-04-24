@@ -6,3 +6,4 @@ export { upsertSegmentProfile } from './upsertSegmentProfile';
 export { mortgageCompletion } from './mortgageCompletion';
 export { setSegmentProfile } from './setSegmentProfile';
 export { authenticateUser } from './authenticateUser';
+export { sendEmail } from './sendEmail';

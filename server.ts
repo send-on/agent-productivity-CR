@@ -8,7 +8,7 @@ import axios from 'axios';
 import cors from 'cors';
 import { toolManifest } from './agent/tools/toolManifest';
 import { GptService } from './responseServer/GptService';
-import { resolveInitialCallInfo } from './agent/utils';
+import { identifyMissingCols, resolveInitialCallInfo } from './agent/utils';
 import { Types } from './typings';
 import { mergeInstructions } from './agent/utils';
 
@@ -184,7 +184,7 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           const segmentProfile =
             customParameters['segmentProfile'] ?? 'unknown';
 
-          const loans = customParameters['loans'] ?? 'unknown';
+          let loans = customParameters['loans'] ?? 'unknown';
 
           const initialCallInfo = resolveInitialCallInfo({
             to,
@@ -205,6 +205,11 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           }
 
           await gptService.notifyInitialCallParams();
+
+          if (loans !== 'unknown') {
+            loans = JSON.parse(loans);
+            loans = loans.map((loan: any) => identifyMissingCols(loan));
+          }
 
           let prompt = `use the # Call Start context to start the conversation.
           The call direction is ${

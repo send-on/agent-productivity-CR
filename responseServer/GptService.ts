@@ -83,6 +83,17 @@ export class GptService extends EventEmitter {
     }
   }
 
+  private async createConversationSummary() {
+    const summaryResponse = await this.openai.chat.completions.create({
+      model: this.model,
+      temperature: this.temperature,
+      messages: this.messages,
+      stream: false,
+    });
+
+    return summaryResponse.choices[0]?.message?.content || '';
+  }
+
   private async handleToolCalls(
     toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]
   ): Promise<void> {
@@ -112,6 +123,9 @@ export class GptService extends EventEmitter {
           break;
         case 'send-text':
           await this.sendText(toolCall);
+          break;
+        case 'send-recap':
+          await this.sendRecap(toolCall);
           break;
         case 'mortgage-completion':
           await this.mortgageCompletion(toolCall);
@@ -413,17 +427,6 @@ export class GptService extends EventEmitter {
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall,
     _assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage
   ) {
-    const createSummary = async () => {
-      const summaryResponse = await this.openai.chat.completions.create({
-        model: this.model,
-        temperature: this.temperature,
-        messages: this.messages,
-        stream: false,
-      });
-
-      return summaryResponse.choices[0]?.message?.content || '';
-    };
-
     // Complete the live-agent-handoff
     this.messageHandler({
       role: 'tool',
@@ -446,13 +449,13 @@ export class GptService extends EventEmitter {
       content: summaryPrompt,
     });
 
-    const summary = await createSummary();
+    const conversationSummary = await this.createConversationSummary();
 
     await utils
       .sendToCoast({
         sender: 'system:ai_summary',
         type: 'string',
-        message: summary,
+        message: conversationSummary,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -469,7 +472,7 @@ export class GptService extends EventEmitter {
       handoffData: JSON.stringify({
         reasonCode: 'live-agent-handoff',
         reason: 'Basic information gathered',
-        conversationSummary: summary,
+        conversationSummary,
       }),
     };
 
@@ -488,7 +491,7 @@ export class GptService extends EventEmitter {
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ) {
     const args = JSON.parse(toolCall.function.arguments);
-    console.log('args for send text is here:', args);
+    console.log('args for send text are here:', args);
 
     await utils
       .sendToCoast({
@@ -509,11 +512,42 @@ export class GptService extends EventEmitter {
     });
   }
 
+  private async sendRecap(
+    toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
+  ) {
+    const args = JSON.parse(toolCall.function.arguments);
+    console.log('args for send recap are here:', args);
+
+    const conversationSummary = await this.createConversationSummary();
+
+    await utils
+      .sendToCoast({
+        sender: 'system:tool',
+        type: 'string',
+        message: `Calling send-recap to deliver email to the user ${JSON.stringify(
+          args
+        )} with the following summary: ${conversationSummary}`,
+      })
+      .catch((err) => console.error('Failed to send to Coast:', err));
+
+    await toolFunctions.sendEmail({
+      to: args.to,
+      subject: args.subject,
+      content: conversationSummary,
+    });
+
+    this.messageHandler({
+      role: 'tool',
+      content: `Message sent to customer, let customer know and wait for response`,
+      toolCall,
+    });
+  }
+
   private async mortgageCompletion(
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ) {
     const args = JSON.parse(toolCall.function.arguments);
-    console.log('args for send text is here:', args);
+    console.log('args for send text are here:', args);
 
     await utils
       .sendToCoast({

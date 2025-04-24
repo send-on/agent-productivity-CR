@@ -25,10 +25,6 @@ export const airtableCols = [
     type: 'text',
   },
   {
-    name: 'annual_income',
-    type: 'text',
-  },
-  {
     name: 'house_address',
     type: 'text',
   },
@@ -72,6 +68,14 @@ export const airtableCols = [
   },
   {
     name: 'house_price',
+    type: 'text',
+  },
+  {
+    name: 'annual_income',
+    type: 'text',
+  },
+  {
+    name: 'employer_name',
     type: 'text',
   },
 ];
