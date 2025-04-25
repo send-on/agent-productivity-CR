@@ -108,3 +108,11 @@ pnpm dev
 ngrok http --domain <your-ngrok-domain> 3001
 
 ```
+
+## Deployment
+This site is currently hosted using heroku for the express app, ours is found [here](https://dashboard.heroku.com/apps/owl-homes-conversational-relay).   
+While the serverless functions are on Twilio under the corresponding account sid.
+
+### Heroku 
+Heroku requires specific env variables to run as expected. These can be found in the .env.local file marked as such.
+Once the server is hosted and running if you need to see the live logs, running `heroku logs --tail -a APP_NAME` will result in a live look. In this case we called ours `owl-homes-conversational-relay` for the app name. 

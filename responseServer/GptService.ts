@@ -1,13 +1,14 @@
 import OpenAI from 'openai';
 import EventEmitter from 'events';
 import dotenv from 'dotenv';
+import { ChatCompletionMessageParam } from 'openai/resources/chat';
 import { FieldSet, Records } from 'airtable';
 import { toolFunctions, utils, Types } from './imports';
 dotenv.config();
 
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
-const SENDGRID_COMPLETION_TEMPLATE_ID =
-  process.env.SENDGRID_COMPLETION_TEMPLATE_ID;
+const SENDGRID_TEMPLATE_ID_COMPLETION =
+  process.env.SENDGRID_TEMPLATE_ID_COMPLETION;
 
 export class GptService extends EventEmitter {
   openai: OpenAI;
@@ -86,10 +87,17 @@ export class GptService extends EventEmitter {
   }
 
   private async createConversationSummary() {
+    const summaryPrompt: ChatCompletionMessageParam = {
+      role: 'user',
+      content: `Can you please summarize this conversation in a clear and friendly way for the customer? 
+      Include any key information they provided or that was discussed. 
+      Don't tell me this is a summary, just give me the summary.`,
+    };
+
     const summaryResponse = await this.openai.chat.completions.create({
       model: this.model,
       temperature: this.temperature,
-      messages: this.messages,
+      messages: [...this.messages, summaryPrompt],
       stream: false,
     });
 
@@ -531,7 +539,7 @@ export class GptService extends EventEmitter {
       to: args.to,
       subject: args.subject,
       content: conversationSummary,
-      templateId: SENDGRID_COMPLETION_TEMPLATE_ID,
+      templateId: SENDGRID_TEMPLATE_ID_COMPLETION,
     });
 
     const responseContent = {
@@ -560,7 +568,6 @@ export class GptService extends EventEmitter {
       .catch((err) => console.error('Failed to send to Coast:', err));
 
     const response = await toolFunctions.mortgageCompletion(args);
-    console.log('response', response);
 
     await utils
       .sendToCoast({
