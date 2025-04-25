@@ -48,5 +48,5 @@ export async function mortgageCompletion({
 
 mortgageCompletion({
   loan_application_id: 'c7f57342-8154-4432-2651-615baa964daa_1745261587323',
-  to: 'phone_number',
+  to: '+19417402097',
 });

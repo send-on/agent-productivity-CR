@@ -8,36 +8,53 @@ type sendEmailProps = {
   to: string;
   subject: string;
   content: string;
+  templateId?: string;
 };
 
-export async function sendEmail({ to, subject, content }: sendEmailProps) {
+export async function sendEmail({
+  to,
+  subject,
+  content,
+  templateId,
+}: sendEmailProps) {
   try {
-    console.log({
-      to,
-      subject,
-      content,
-    });
-    return;
     if (!sendgridKey) {
       throw new Error(
-        'Sedngrid credentials are not set in environment variables.'
+        'Sendgrid credentials are not set in environment variables.'
       );
     }
 
     sgMail.setApiKey(sendgridKey);
 
-    const msg = {
-      to,
-      from: 'test@example.com',
-      subject,
-      html: `<strong>${content}</strong>`,
-    };
+    let msg = {} as sgMail.MailDataRequired;
+
+    if (templateId) {
+      msg = {
+        to,
+        from: 'nemery@twilio.com',
+        templateId,
+        dynamicTemplateData: { content },
+      };
+    } else {
+      msg = {
+        to,
+        from: 'nemery@twilio.com',
+        subject,
+        html: `<div>${content}</div>`,
+      };
+    }
 
     const result = await sgMail.send(msg);
-    console.log(`✓ Message sent to ${to}}`);
+    console.log(`✓ Message sent to ${to}`);
     return result;
   } catch (error) {
     console.error('✗ Failed to send message:', error);
     throw error;
   }
 }
+
+// sendEmail({
+//   to: 'nemery@twilio.com',
+//   subject: 'Test Email',
+//   content: 'This is a test email from SendGrid.',
+// });

@@ -96,4 +96,9 @@ export namespace Types {
     type: 'string' | 'JSON';
     message: unknown;
   };
+
+  /* ---------------- Serverless ---------------- */
+  export type TwilioRuntime = {
+    getAssets: () => Record<string, { path: string }>;
+  };
 }

@@ -6,6 +6,8 @@ import { toolFunctions, utils, Types } from './imports';
 dotenv.config();
 
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+const SENDGRID_COMPLETION_TEMPLATE_ID =
+  process.env.SENDGRID_COMPLETION_TEMPLATE_ID;
 
 export class GptService extends EventEmitter {
   openai: OpenAI;
@@ -123,9 +125,6 @@ export class GptService extends EventEmitter {
           break;
         case 'send-text':
           await this.sendText(toolCall);
-          break;
-        case 'send-recap':
-          await this.sendRecap(toolCall);
           break;
         case 'mortgage-completion':
           await this.mortgageCompletion(toolCall);
@@ -459,14 +458,6 @@ export class GptService extends EventEmitter {
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
-    // After getting the summary, we'll extract the primary topic
-    const topicPrompt = `Based on the conversation, what is the primary topic being discussed? Respond with a single phrase or word.`;
-    this.messages.push({ role: 'user', content: topicPrompt });
-
-    // After getting the summary, we’ll analyze its sentiment using GPT-4.
-    const sentimentPrompt = `Analyze the sentiment of the following text and return one of the following values: Positive, Neutral, or Negative.`;
-    this.messages.push({ role: 'user', content: sentimentPrompt });
-
     const responseContent = {
       type: 'end',
       handoffData: JSON.stringify({
@@ -515,6 +506,12 @@ export class GptService extends EventEmitter {
   private async sendRecap(
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ) {
+    this.messageHandler({
+      role: 'tool',
+      content: `Message sent to customer, let customer know and wait for response`,
+      toolCall,
+    });
+
     const args = JSON.parse(toolCall.function.arguments);
     console.log('args for send recap are here:', args);
 
@@ -534,13 +531,16 @@ export class GptService extends EventEmitter {
       to: args.to,
       subject: args.subject,
       content: conversationSummary,
+      templateId: SENDGRID_COMPLETION_TEMPLATE_ID,
     });
 
-    this.messageHandler({
-      role: 'tool',
-      content: `Message sent to customer, let customer know and wait for response`,
-      toolCall,
-    });
+    const responseContent = {
+      type: 'text',
+      last: true,
+      token: `I have sent a recap sent to ${args.to}, is there anything else I can help you with, or will that be all for today?`,
+    };
+
+    return responseContent;
   }
 
   private async mortgageCompletion(
@@ -620,6 +620,10 @@ export class GptService extends EventEmitter {
         // Send the caller to the live agent which requires an end call event afterwards.
         if (toolCalls[0].function.name === 'live-agent-handoff') {
           return await this.liveAgentHandoff(toolCalls[0], assistantMessage);
+        }
+        // Sending recap requires a returned value to the assistant.
+        else if (toolCalls[0].function.name === 'send-recap') {
+          return await this.sendRecap(toolCalls[0]);
         }
 
         await this.handleToolCalls(toolCalls);

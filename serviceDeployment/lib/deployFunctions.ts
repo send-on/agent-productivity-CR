@@ -77,6 +77,7 @@ async function deployFunctions(
     },
     envPath: '',
     functionsFolderName: 'dist/functions/serverless',
+    assetsFolderName: 'dist/functions/assets',
   });
 
   // Save Functions domain to .env
