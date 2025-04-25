@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { Types } from 'typings';
 import { getSegmentProfile } from '../../agent/tools/getSegmentProfile';
 import { getMortgages } from '../../agent/tools/getMortgages';
+import { sendToCoast } from '../../agent/utils';
 
 dotenv.config();
 
@@ -25,7 +26,25 @@ exports.handler = async function (
 
     const customerNumber = Direction.includes('outbound') ? To : From;
     // Get segment profile to try and have their name found for the agent
+    
+    await sendToCoast({
+      sender: 'system:tool',
+      type: 'string',
+      message: `Calling tool get-segment-profile on ${JSON.stringify(
+        customerNumber
+      )}`,
+    })
+    .catch((err) => console.error('Failed to send to Coast:', err));
+
+    
     const segmentProfile = await getSegmentProfile(customerNumber);
+
+    await sendToCoast({
+      sender: 'system:customer_profile',
+      type: 'JSON',
+      message: { customerData: segmentProfile },
+    })
+    .catch((err) => console.error('Failed to send to Coast:', err));
 
     // Create TwiML response
     const response = new twilio.twiml.VoiceResponse();
@@ -84,6 +103,23 @@ exports.handler = async function (
       queryField: 'phone',
       queryValue: customerNumber,
     });
+
+    await sendToCoast({
+      sender: 'system:tool',
+      type: 'string',
+      message: `Calling get-mortgages to fetch records for ${JSON.stringify(
+        customerNumber
+      )}...`,
+    })
+    .catch((err) => console.error('Failed to send to Coast:', err));
+
+    
+    await sendToCoast({
+      sender: 'system:mortgage_records',
+      type: 'JSON',
+      message: loans,
+    })
+    .catch((err) => console.error('Failed to send to Coast:', err));
 
     if (loans) {
       conversationRelay.parameter({
