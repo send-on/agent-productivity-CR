@@ -8,7 +8,7 @@ import axios from 'axios';
 import cors from 'cors';
 import { toolManifest } from './agent/tools/toolManifest';
 import { GptService } from './responseServer/GptService';
-import { resolveInitialCallInfo } from './agent/utils';
+import { identifyMissingCols, resolveInitialCallInfo } from './agent/utils';
 import { Types } from './typings';
 import { mergeInstructions } from './agent/utils';
 
@@ -98,15 +98,24 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           // A text message is received from the user
           if (externalMessage && gptService) {
             const message = JSON.parse(data);
+            let prompt = '';
             console.log('message in text', message);
             console.log('external_messages in ws', externalMessage);
 
+            if (gptService.callerContext.validation.isRequired) {
+              prompt = 'Received text message for user authentication';
+            } else {
+              prompt =
+                'Received text message with content, upsert the customer mortgage with the appropriate values';
+            }
+
             gptResponse = await gptService.generateResponse({
               role: 'user',
-              prompt:
-                'Received text message with content, upsert the customer mortgage with the appropriate values',
+              prompt,
               externalMessage,
             });
+
+            // reset the message to null afterwards
             externalMessage = null;
             ws.send(JSON.stringify(gptResponse));
           }
@@ -171,21 +180,56 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           console.debug(`[Conversation Relay] DTMF: ${message.digits?.digit}`);
           break;
         case 'setup':
-          console.log('Initializing GptService with Context and Manifest');
+          const { to, from, callSid, direction, customParameters } = message;
+          const segmentProfile =
+            customParameters['segmentProfile'] ?? 'unknown';
 
-          const { to, from, callSid } = message;
-          const initialCallInfo = resolveInitialCallInfo({ to, from, callSid });
+          let loans = customParameters['loans'] ?? 'unknown';
+
+          const initialCallInfo = resolveInitialCallInfo({
+            to,
+            from,
+            callSid,
+            direction,
+            callReason: customParameters['callReason'],
+          });
+
           gptService = new GptService({
             promptContext,
             toolManifest,
             initialCallInfo,
           });
 
+          if (initialCallInfo.direction === 'outbound-api') {
+            gptService.callerContext.validation.isRequired = true;
+          }
+
           await gptService.notifyInitialCallParams();
+
+          if (loans !== 'unknown') {
+            loans = JSON.parse(loans);
+            loans = loans.map((loan: any) => identifyMissingCols(loan));
+          }
+
+          let prompt = `use the # Call Start context to start the conversation.
+          The call direction is ${
+            initialCallInfo.direction
+          } call with the customer 
+          The call reference is ${initialCallInfo.callReason}
+          The segment profile is ${JSON.stringify(segmentProfile)}.
+          The customer has the following mortgage loan applications: ${JSON.stringify(
+            loans
+          )}`;
+
+          if (customParameters['loans']) {
+            prompt += `The customer has the following mortgage loan applications: ${JSON.stringify(
+              loans
+            )}`;
+          }
 
           gptResponse = await gptService.generateResponse({
             role: 'system',
-            prompt: `use the # Call Start context to start the conversation`,
+            prompt,
           });
 
           ws.send(JSON.stringify(gptResponse));

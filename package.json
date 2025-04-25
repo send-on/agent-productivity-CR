@@ -15,6 +15,7 @@
   "author": "Oliver Han",
   "license": "MIT",
   "dependencies": {
+    "@sendgrid/mail": "^8.1.5",
     "@twilio-labs/serverless-runtime-types": "^4.0.1",
     "@twilio/runtime-handler": "2.0.1",
     "airtable": "^0.12.2",

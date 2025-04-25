@@ -21,7 +21,6 @@ export async function setSegmentProfile({
   const userId = email;
 
   try {
-    return; // REMOVE ME!!!
     await axios.post(
       'https://api.segment.io/v1/identify',
       {

@@ -16,6 +16,7 @@ dotenv.config();
 type TwilioEventOutboundConnection = {
   to: string;
   from: string;
+  callReason?: string;
 };
 
 exports.handler = async function (
@@ -23,14 +24,7 @@ exports.handler = async function (
   event: TwilioEventOutboundConnection,
   callback: ServerlessCallback
 ) {
-  const url =
-    'https://handler.twilio.com/twiml/EH71de11425970236bf7c4d850fb46f82c';
-  const client: Twilio = twilio(
-    process.env.TWILIO_ACCOUNT_SID || context.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN || context.TWILIO_AUTH_TOKEN
-  );
-
-  const { to, from } = event;
+  const { to, from, callReason } = event;
 
   if (!to || !from) {
     return callback(null, {
@@ -40,10 +34,28 @@ exports.handler = async function (
     });
   }
 
+  // process.env.NODE_ENV === 'development' is not working as expected.
+  // Keying off ngrok URL to determine if we are in development - shouldn't be in twilio console env var list.
+  // Can set this to false here if you want to test production endpoints locally.
+  const isDevelopment = !!process.env.NGROK_URL;
+  const voiceConnectionRoute = 'voice-connection';
+  let url = isDevelopment
+    ? `https://${process.env.NGROK_URL}/serverless/${voiceConnectionRoute}`
+    : `https://${context.DOMAIN_NAME}/${voiceConnectionRoute}`;
+
+  const client: Twilio = twilio(
+    process.env.TWILIO_ACCOUNT_SID || context.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN || context.TWILIO_AUTH_TOKEN
+  );
+
+  if (callReason) {
+    url = `${url}?callReason=${encodeURIComponent(callReason)}`;
+  }
+
   try {
     const call = await client.calls.create({
-      from: event.from,
-      to: event.to,
+      from,
+      to,
       url,
     });
 

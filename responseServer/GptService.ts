@@ -6,6 +6,8 @@ import { toolFunctions, utils, Types } from './imports';
 dotenv.config();
 
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o';
+const SENDGRID_COMPLETION_TEMPLATE_ID =
+  process.env.SENDGRID_COMPLETION_TEMPLATE_ID;
 
 export class GptService extends EventEmitter {
   openai: OpenAI;
@@ -17,7 +19,7 @@ export class GptService extends EventEmitter {
   customerNumber!: string;
   callSid!: string;
   direction!: Types.InitialCallInfo['direction'];
-  inReference!: Types.InitialCallInfo['inReference'];
+  callReason!: Types.InitialCallInfo['callReason'];
   // Setting things to null in caller context means we tried to look for it initially and its not found.
   callerContext: Types.CallerContext;
   constructor({
@@ -31,7 +33,12 @@ export class GptService extends EventEmitter {
     this.temperature = 0.1;
     this.messages = [{ role: 'system', content: promptContext }];
     this.toolManifest = toolManifest;
-    this.callerContext = {};
+    this.callerContext = {
+      validation: {
+        isRequired: false,
+        isValidated: false,
+      },
+    };
 
     Object.assign(this, initialCallInfo);
   }
@@ -45,22 +52,17 @@ export class GptService extends EventEmitter {
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
-    console.log(
-      `[GptService] Call to: ${this.twilioNumber} 
-      from: ${this.customerNumber} 
-      with call SID: ${this.callSid}`
-    );
-
     const content = `The customer phone number or "from" number is ${this.customerNumber}, 
     the callSid is ${this.callSid} and the number to send SMSs from is: ${this.twilioNumber}. 
     Use this information throughout as the reference when calling any of the tools. 
     Specifically use the callSid when you use the "transfer-to-agent" tool to transfer the call to the agent.
-    Do not forget to include the + in the phone number!
-    The call direction is ${this.direction} call with the customer 
-    The call reference is ${this.inReference}.
+    Do not forget to include the + in the phone number!.
     `;
 
-    console.log(content);
+    console.log(
+      `[GptService] Call to: notifyInitialCallParams
+      ${content}`
+    );
 
     this.messageHandler({
       role: 'system',
@@ -83,6 +85,17 @@ export class GptService extends EventEmitter {
     }
   }
 
+  private async createConversationSummary() {
+    const summaryResponse = await this.openai.chat.completions.create({
+      model: this.model,
+      temperature: this.temperature,
+      messages: this.messages,
+      stream: false,
+    });
+
+    return summaryResponse.choices[0]?.message?.content || '';
+  }
+
   private async handleToolCalls(
     toolCalls: OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]
   ): Promise<void> {
@@ -92,6 +105,9 @@ export class GptService extends EventEmitter {
       );
 
       switch (toolCall.function.name) {
+        case 'authenticate-user':
+          await this.authenticateUser(toolCall);
+          break;
         case 'get-segment-profile':
           await this.getSegmentProfile(toolCall);
           break;
@@ -123,6 +139,40 @@ export class GptService extends EventEmitter {
     }
   }
 
+  private async authenticateUser(
+    toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
+  ) {
+    const args = JSON.parse(toolCall.function.arguments);
+    console.log('args for authenticate user:', args);
+
+    await utils
+      .sendToCoast({
+        sender: 'system:tool',
+        type: 'string',
+        message: `Calling authenticate-user to validate the user ${JSON.stringify(
+          args
+        )}`,
+      })
+      .catch((err) => console.error('Failed to send to Coast:', err));
+
+    const isValidated = await toolFunctions.authenticateUser(args);
+    this.callerContext.validation.isValidated = isValidated;
+
+    await utils
+      .sendToCoast({
+        sender: 'system:tool',
+        type: 'string',
+        message: `User validation status: ${isValidated}`,
+      })
+      .catch((err) => console.error('Failed to send to Coast:', err));
+
+    this.messageHandler({
+      role: 'tool',
+      content: `User validation status: ${isValidated}`,
+      toolCall,
+    });
+  }
+
   private async getSegmentProfile(
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ) {
@@ -140,7 +190,7 @@ export class GptService extends EventEmitter {
       this.customerNumber
     );
 
-    this.callerContext.segment ??= customerData;
+    // this.callerContext.segment ??= customerData;
 
     console.log(
       `[GptService] getCustomer Tool response: ${JSON.stringify(customerData)}`
@@ -363,7 +413,7 @@ export class GptService extends EventEmitter {
       ...segmentProfile,
     });
 
-    this.callerContext.segment ??= segmentProfile;
+    //this.callerContext.segment ??= segmentProfile;
 
     this.messageHandler({
       role: 'tool',
@@ -376,17 +426,6 @@ export class GptService extends EventEmitter {
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall,
     _assistantMessage: OpenAI.Chat.Completions.ChatCompletionMessage
   ) {
-    const createSummary = async () => {
-      const summaryResponse = await this.openai.chat.completions.create({
-        model: this.model,
-        temperature: this.temperature,
-        messages: this.messages,
-        stream: false,
-      });
-
-      return summaryResponse.choices[0]?.message?.content || '';
-    };
-
     // Complete the live-agent-handoff
     this.messageHandler({
       role: 'tool',
@@ -409,30 +448,22 @@ export class GptService extends EventEmitter {
       content: summaryPrompt,
     });
 
-    const summary = await createSummary();
+    const conversationSummary = await this.createConversationSummary();
 
     await utils
       .sendToCoast({
         sender: 'system:ai_summary',
         type: 'string',
-        message: summary,
+        message: conversationSummary,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
-
-    // After getting the summary, we'll extract the primary topic
-    const topicPrompt = `Based on the conversation, what is the primary topic being discussed? Respond with a single phrase or word.`;
-    this.messages.push({ role: 'user', content: topicPrompt });
-
-    // After getting the summary, we’ll analyze its sentiment using GPT-4.
-    const sentimentPrompt = `Analyze the sentiment of the following text and return one of the following values: Positive, Neutral, or Negative.`;
-    this.messages.push({ role: 'user', content: sentimentPrompt });
 
     const responseContent = {
       type: 'end',
       handoffData: JSON.stringify({
         reasonCode: 'live-agent-handoff',
         reason: 'Basic information gathered',
-        conversationSummary: summary,
+        conversationSummary,
       }),
     };
 
@@ -451,7 +482,7 @@ export class GptService extends EventEmitter {
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ) {
     const args = JSON.parse(toolCall.function.arguments);
-    console.log('args for send text is here:', args);
+    console.log('args for send text are here:', args);
 
     await utils
       .sendToCoast({
@@ -472,11 +503,51 @@ export class GptService extends EventEmitter {
     });
   }
 
+  private async sendRecap(
+    toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
+  ) {
+    this.messageHandler({
+      role: 'tool',
+      content: `Message sent to customer, let customer know and wait for response`,
+      toolCall,
+    });
+
+    const args = JSON.parse(toolCall.function.arguments);
+    console.log('args for send recap are here:', args);
+
+    const conversationSummary = await this.createConversationSummary();
+
+    await utils
+      .sendToCoast({
+        sender: 'system:tool',
+        type: 'string',
+        message: `Calling send-recap to deliver email to the user ${JSON.stringify(
+          args
+        )} with the following summary: ${conversationSummary}`,
+      })
+      .catch((err) => console.error('Failed to send to Coast:', err));
+
+    await toolFunctions.sendEmail({
+      to: args.to,
+      subject: args.subject,
+      content: conversationSummary,
+      templateId: SENDGRID_COMPLETION_TEMPLATE_ID,
+    });
+
+    const responseContent = {
+      type: 'text',
+      last: true,
+      token: `I have sent a recap sent to ${args.to}, is there anything else I can help you with, or will that be all for today?`,
+    };
+
+    return responseContent;
+  }
+
   private async mortgageCompletion(
     toolCall: OpenAI.Chat.Completions.ChatCompletionMessageToolCall
   ) {
     const args = JSON.parse(toolCall.function.arguments);
-    console.log('args for send text is here:', args);
+    console.log('args for send text are here:', args);
 
     await utils
       .sendToCoast({
@@ -489,7 +560,7 @@ export class GptService extends EventEmitter {
       .catch((err) => console.error('Failed to send to Coast:', err));
 
     const response = await toolFunctions.mortgageCompletion(args);
-    console.log('response', response)
+    console.log('response', response);
 
     await utils
       .sendToCoast({
@@ -498,8 +569,6 @@ export class GptService extends EventEmitter {
         message: response?.data,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
-    
-
 
     this.messageHandler({
       role: 'tool',
@@ -552,6 +621,10 @@ export class GptService extends EventEmitter {
         if (toolCalls[0].function.name === 'live-agent-handoff') {
           return await this.liveAgentHandoff(toolCalls[0], assistantMessage);
         }
+        // Sending recap requires a returned value to the assistant.
+        else if (toolCalls[0].function.name === 'send-recap') {
+          return await this.sendRecap(toolCalls[0]);
+        }
 
         await this.handleToolCalls(toolCalls);
 
@@ -585,12 +658,12 @@ export class GptService extends EventEmitter {
       this.messages.push({ role: 'assistant', content });
 
       await utils
-          .sendToCoast({
-            sender: 'Conversation Relay Assistant',
-            type: 'string',
-            message: content,
-          })
-          .catch((err) => console.error('Failed to send to Coast:', err));
+        .sendToCoast({
+          sender: 'Conversation Relay Assistant',
+          type: 'string',
+          message: content,
+        })
+        .catch((err) => console.error('Failed to send to Coast:', err));
 
       return {
         type: 'text',
