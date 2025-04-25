@@ -2,7 +2,8 @@ import sgMail from '@sendgrid/mail';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const sendgridKey = process.env.SENDGRID_API_KEY || '';
+const sendGridKey = process.env.SENDGRID_API_KEY;
+const sendGridDomain = process.env.SENDGRID_DOMAIN;
 
 type sendEmailProps = {
   to: string;
@@ -18,27 +19,30 @@ export async function sendEmail({
   templateId,
 }: sendEmailProps) {
   try {
-    if (!sendgridKey) {
+    if (!sendGridKey || !sendGridDomain) {
       throw new Error(
         'Sendgrid credentials are not set in environment variables.'
       );
     }
 
-    sgMail.setApiKey(sendgridKey);
+    sgMail.setApiKey(sendGridKey);
 
     let msg = {} as sgMail.MailDataRequired;
 
-    if (templateId) {
+    if (templateId && !to.includes('@twilio.com')) {
       msg = {
         to,
-        from: 'nemery@twilio.com',
+        from: sendGridDomain,
         templateId,
-        dynamicTemplateData: { content },
+        dynamicTemplateData: {
+          content,
+          subject,
+        },
       };
     } else {
       msg = {
         to,
-        from: 'nemery@twilio.com',
+        from: sendGridDomain,
         subject,
         html: `<div>${content}</div>`,
       };
@@ -52,9 +56,3 @@ export async function sendEmail({
     throw error;
   }
 }
-
-// sendEmail({
-//   to: 'nemery@twilio.com',
-//   subject: 'Test Email',
-//   content: 'This is a test email from SendGrid.',
-// });

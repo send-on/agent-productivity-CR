@@ -59,7 +59,7 @@ async function createCompletionTemplate(client: Twilio) {
     console.log(`Created new content template: ${content.sid}`);
 
     // Save the assigned phone number to the .env file
-    updateEnvFile('MESSAGE_COMPLETION_TEMPLATE', content.sid);
+    updateEnvFile('TWILIO_MESSAGE_COMPLETION_TEMPLATE', content.sid);
 
     return content.sid;
   } catch (error) {

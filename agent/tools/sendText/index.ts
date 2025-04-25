@@ -21,8 +21,6 @@ export async function sendText(to: string, missing: []) {
 
     const client = new Twilio(accountSid, authToken);
 
-    console.log(missing);
-
     const result = await client.messages.create({
       body: `Hello! We need the following information from you: ${missing.join(
         ', '
