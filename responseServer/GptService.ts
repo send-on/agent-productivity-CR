@@ -545,7 +545,7 @@ export class GptService extends EventEmitter {
     const responseContent = {
       type: 'text',
       last: true,
-      token: `I have sent a recap sent to ${args.to}, is there anything else I can help you with, or will that be all for today?`,
+      token: `I have sent you an email recap, is there anything else I can help you with, or will that be all for today?`,
     };
 
     return responseContent;

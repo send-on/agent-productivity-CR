@@ -16,7 +16,7 @@ export async function mortgageCompletion({
   console.log({ to, loan_application_id });
 
   const body = {
-    content_sid: 'HX1e6d69ffa20c4d6a0461b6945074c309', // SHOULD SWAP THIS TO ENV VAR ONCE WE CREATE THIS IN THE SERVERLESS DEPLOYMENT
+    content_sid: 'HX8e3863d462ca7694a8dac86072e4d81e', // SHOULD SWAP THIS TO ENV VAR ONCE WE CREATE THIS IN THE SERVERLESS DEPLOYMENT
     message: 'Your mortgage application is complete.',
     loan_application_id,
     to,
