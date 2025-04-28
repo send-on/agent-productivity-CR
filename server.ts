@@ -11,7 +11,6 @@ import { GptService } from './responseServer/GptService';
 import { identifyMissingCols, resolveInitialCallInfo } from './agent/utils';
 import { Types } from './typings';
 import { mergeInstructions } from './agent/utils';
-import { getSegmentProfile } from './agent/tools/getSegmentProfile';
 
 dotenv.config();
 
@@ -182,8 +181,8 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           break;
         case 'setup':
           const { to, from, callSid, direction, customParameters } = message;
-          const segmentProfile = await getSegmentProfile(from) ?? {};
-            
+          const segmentProfile =
+            customParameters['segmentProfile'] ?? 'unknown';
 
           let loans = customParameters['loans'] ?? 'unknown';
 
