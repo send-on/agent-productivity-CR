@@ -21,6 +21,8 @@ export async function getSegmentProfile(
       },
     });
 
+    console.log('segment response:', JSON.stringify(response.data));
+
     const { first_name, last_name, phone, email, user_id } =
       response.data.traits;
 

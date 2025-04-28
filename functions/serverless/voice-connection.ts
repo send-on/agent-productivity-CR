@@ -65,6 +65,11 @@ exports.handler = async function (
     // Create TwiML response
     const response = new twilio.twiml.VoiceResponse();
 
+    const start = response.start();
+    start.transcription({
+      intelligenceService: 'GAe6e37ed1b6405e90fac4dfa3dd69ab19'
+    });
+
     // process.env.NODE_ENV === 'development' is not working as expected.
     // Keying off ngrok URL to determine if we are in development - shouldn't be in twilio console env var list.
     // Can set this to false here if you want to test production endpoints locally.
@@ -100,6 +105,7 @@ exports.handler = async function (
       debug: true, // Debugging enabled
       url: relayUrl, // Your WebSocket URL
     });
+  
 
     if (segmentProfile) {
       conversationRelay.parameter({

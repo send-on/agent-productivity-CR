@@ -14,7 +14,7 @@ import { mergeInstructions } from './agent/utils';
 
 dotenv.config();
 
-const promptContext = mergeInstructions('./agent/instructions');
+const promptContext = mergeInstructions('./agent/instructionsv2');
 
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
@@ -211,12 +211,12 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             loans = loans.map((loan: any) => identifyMissingCols(loan));
           }
 
-          let prompt = `use the # Call Start context to start the conversation.
+          let prompt = `use the ### Instructions to guide the call.
           The call direction is ${
             initialCallInfo.direction
           } call with the customer 
           The call reference is ${initialCallInfo.callReason}
-          The segment profile is ${JSON.stringify(segmentProfile)}.
+          The caller's segment profile is ${JSON.stringify(segmentProfile)}.
           The customer has the following mortgage loan applications: ${JSON.stringify(
             loans
           )}`;
