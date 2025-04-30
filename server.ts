@@ -155,6 +155,8 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           }
           break;
         case 'interrupt':
+          gptService?.abort();
+
           console.info(
             `[Conversation Relay] Interrupt: ${JSON.stringify(
               message,

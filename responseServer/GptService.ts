@@ -23,6 +23,7 @@ export class GptService extends EventEmitter {
   callReason!: Types.InitialCallInfo['callReason'];
   // Setting things to null in caller context means we tried to look for it initially and its not found.
   callerContext: Types.CallerContext;
+  activeCompletionId: string | undefined;
   constructor({
     promptContext,
     toolManifest,
@@ -41,6 +42,7 @@ export class GptService extends EventEmitter {
       },
     };
 
+    this.activeCompletionId = undefined;
     Object.assign(this, initialCallInfo);
   }
 
@@ -593,6 +595,9 @@ export class GptService extends EventEmitter {
     try {
       console.log({ role, prompt, externalMessage });
 
+      const currentCompletionId = Math.random().toString();
+      this.activeCompletionId = currentCompletionId;
+
       if (externalMessage) {
         console.log('external_messages in gptService:', externalMessage);
         this.messages.push({
@@ -642,6 +647,15 @@ export class GptService extends EventEmitter {
           stream: false,
         });
 
+        if (currentCompletionId !== this.activeCompletionId) {
+          console.log('Aborting response due to new completion ID');
+          return {
+            type: 'text',
+            token: '',
+            last: true,
+          };
+        }
+
         const content = finalResponse.choices[0]?.message?.content ?? '';
         this.messages.push({ role: 'assistant', content });
 
@@ -672,6 +686,15 @@ export class GptService extends EventEmitter {
         })
         .catch((err) => console.error('Failed to send to Coast:', err));
 
+      if (currentCompletionId !== this.activeCompletionId) {
+        console.log('Aborting response due to new completion ID');
+        return {
+          type: 'text',
+          token: '',
+          last: true,
+        };
+      }
+
       return {
         type: 'text',
         token: content,
@@ -682,4 +705,8 @@ export class GptService extends EventEmitter {
       throw error;
     }
   }
+
+  abort = () => {
+    this.activeCompletionId = undefined;
+  };
 }
