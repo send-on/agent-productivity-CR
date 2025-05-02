@@ -92,9 +92,12 @@ export namespace Types {
       | 'system:updated_traits'
       | 'system:customer_profile'
       | 'system:message'
-      | 'Conversation Relay Assistant';
+      | 'Conversation Relay Assistant'
+      | 'Customer'
+      | 'interruption';
     type: 'string' | 'JSON';
     message: unknown;
+    phoneNumber: string;
   };
 
   /* ---------------- Serverless ---------------- */

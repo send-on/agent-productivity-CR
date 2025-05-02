@@ -23,6 +23,7 @@ export class GptService extends EventEmitter {
   callReason!: Types.InitialCallInfo['callReason'];
   // Setting things to null in caller context means we tried to look for it initially and its not found.
   callerContext: Types.CallerContext;
+  activeCompletionId: string | undefined;
   constructor({
     promptContext,
     toolManifest,
@@ -41,6 +42,7 @@ export class GptService extends EventEmitter {
       },
     };
 
+    this.activeCompletionId = undefined;
     Object.assign(this, initialCallInfo);
   }
 
@@ -50,6 +52,7 @@ export class GptService extends EventEmitter {
         sender: 'begin',
         type: 'string',
         message: this.customerNumber,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -88,7 +91,7 @@ export class GptService extends EventEmitter {
 
   private async createConversationSummary() {
     const summaryPrompt: ChatCompletionMessageParam = {
-      role: 'user',
+      role: 'system',
       content: `Can you please summarize this conversation in a clear and friendly way for the customer? 
       Include any key information they provided or that was discussed. 
       Don't tell me this is a summary, just give me the summary.`,
@@ -100,7 +103,7 @@ export class GptService extends EventEmitter {
       messages: [...this.messages, summaryPrompt],
       stream: false,
     });
-
+    // return 'summary of conversation';
     return summaryResponse.choices[0]?.message?.content || '';
   }
 
@@ -137,6 +140,9 @@ export class GptService extends EventEmitter {
         case 'mortgage-completion':
           await this.mortgageCompletion(toolCall);
           break;
+        case 'send-recap':
+          await this.sendRecap(toolCall);
+          break;
         default:
           this.messages.push({
             role: 'tool',
@@ -160,6 +166,7 @@ export class GptService extends EventEmitter {
         message: `Calling authenticate-user to validate the user ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -171,6 +178,7 @@ export class GptService extends EventEmitter {
         sender: 'system:tool',
         type: 'string',
         message: `User validation status: ${isValidated}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -191,6 +199,7 @@ export class GptService extends EventEmitter {
         message: `Calling tool get-segment-profile on ${JSON.stringify(
           this.customerNumber
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -209,6 +218,7 @@ export class GptService extends EventEmitter {
         sender: 'system:customer_profile',
         type: 'JSON',
         message: { customerData: customerData },
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -231,6 +241,7 @@ export class GptService extends EventEmitter {
         message: `Calling update-segment-profile to update Segment customer profile with ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -245,6 +256,7 @@ export class GptService extends EventEmitter {
           sender: 'system:updated_traits',
           type: 'JSON',
           message: newTraits,
+          phoneNumber: this.customerNumber,
         })
         .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -275,6 +287,7 @@ export class GptService extends EventEmitter {
         message: `Calling get-mortgages to fetch records for ${JSON.stringify(
           args
         )}...`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -297,6 +310,7 @@ export class GptService extends EventEmitter {
         sender: 'system:mortgage_records',
         type: 'JSON',
         message: mortgages,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -329,6 +343,7 @@ export class GptService extends EventEmitter {
         message: `Calling upsert-mortgage to upsert records on ${JSON.stringify(
           args
         )}...`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -375,6 +390,7 @@ export class GptService extends EventEmitter {
         sender: 'system:mortgage_records',
         type: 'JSON',
         message: updatedRecord,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -446,6 +462,7 @@ export class GptService extends EventEmitter {
         sender: 'system:tool',
         type: 'string',
         message: 'Calling live-agent-handoff and creating summary of call...',
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -463,6 +480,7 @@ export class GptService extends EventEmitter {
         sender: 'system:ai_summary',
         type: 'string',
         message: conversationSummary,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -480,6 +498,7 @@ export class GptService extends EventEmitter {
         sender: 'system:tool',
         type: 'string',
         message: 'Live agent handoff complete... initiating...',
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -499,6 +518,7 @@ export class GptService extends EventEmitter {
         message: `Calling send-text to capture data from the user ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -532,6 +552,7 @@ export class GptService extends EventEmitter {
         message: `Calling send-recap to deliver email to the user ${JSON.stringify(
           args
         )} with the following summary: ${conversationSummary}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -542,13 +563,13 @@ export class GptService extends EventEmitter {
       templateId: SENDGRID_TEMPLATE_ID_COMPLETION,
     });
 
-    const responseContent = {
-      type: 'text',
-      last: true,
-      token: `I have sent you an email recap, is there anything else I can help you with, or will that be all for today?`,
-    };
+    // const responseContent = {
+    //   type: 'system',
+    //   last: true,
+    //   token: `You have been sent a recap email with the summary of the conversation.`,
+    // };
 
-    return responseContent;
+    // return responseContent;
   }
 
   private async mortgageCompletion(
@@ -564,6 +585,7 @@ export class GptService extends EventEmitter {
         message: `Calling mortgage-completion to capture data from the user ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -574,6 +596,7 @@ export class GptService extends EventEmitter {
         sender: 'system:message',
         type: 'JSON',
         message: response?.data,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -592,6 +615,9 @@ export class GptService extends EventEmitter {
   }: Types.GptGenerateResponse): Promise<Types.GptReturnResponse> {
     try {
       console.log({ role, prompt, externalMessage });
+
+      const currentCompletionId = Math.random().toString();
+      this.activeCompletionId = currentCompletionId;
 
       if (externalMessage) {
         console.log('external_messages in gptService:', externalMessage);
@@ -628,10 +654,6 @@ export class GptService extends EventEmitter {
         if (toolCalls[0].function.name === 'live-agent-handoff') {
           return await this.liveAgentHandoff(toolCalls[0], assistantMessage);
         }
-        // Sending recap requires a returned value to the assistant.
-        else if (toolCalls[0].function.name === 'send-recap') {
-          return await this.sendRecap(toolCalls[0]);
-        }
 
         await this.handleToolCalls(toolCalls);
 
@@ -642,6 +664,15 @@ export class GptService extends EventEmitter {
           stream: false,
         });
 
+        if (currentCompletionId !== this.activeCompletionId) {
+          console.log('Aborting response due to new completion ID');
+          return {
+            type: 'text',
+            token: '',
+            last: true,
+          };
+        }
+
         const content = finalResponse.choices[0]?.message?.content ?? '';
         this.messages.push({ role: 'assistant', content });
 
@@ -650,6 +681,7 @@ export class GptService extends EventEmitter {
             sender: 'Conversation Relay Assistant',
             type: 'string',
             message: content,
+            phoneNumber: this.customerNumber,
           })
           .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -669,8 +701,18 @@ export class GptService extends EventEmitter {
           sender: 'Conversation Relay Assistant',
           type: 'string',
           message: content,
+          phoneNumber: this.customerNumber,
         })
         .catch((err) => console.error('Failed to send to Coast:', err));
+
+      if (currentCompletionId !== this.activeCompletionId) {
+        console.log('Aborting response due to new completion ID');
+        return {
+          type: 'text',
+          token: '',
+          last: true,
+        };
+      }
 
       return {
         type: 'text',
@@ -682,4 +724,8 @@ export class GptService extends EventEmitter {
       throw error;
     }
   }
+
+  abort = () => {
+    this.activeCompletionId = undefined;
+  };
 }

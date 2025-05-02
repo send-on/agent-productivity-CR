@@ -10,7 +10,7 @@ import { toolManifest } from './agent/tools/toolManifest';
 import { GptService } from './responseServer/GptService';
 import { identifyMissingCols, resolveInitialCallInfo } from './agent/utils';
 import { Types } from './typings';
-import { mergeInstructions } from './agent/utils';
+import { mergeInstructions, sendToCoast } from './agent/utils';
 
 dotenv.config();
 
@@ -18,19 +18,14 @@ const promptContext = mergeInstructions('./agent/instructionsv2');
 
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
-const COAST_WEBHOOK_URL: string = process.env.COAST_WEBHOOK_URL || '';
 
-let externalMessage: Types.IncomingExternalMessage | null = null;
+const gptSessions = new Map<string, GptService>();
+const phoneToCallSid = new Map<string, string>();
+const wsMap = new Map<string, WebSocket>();
 
 const { app } = ExpressWs(express());
-
-// Initialize express-ws
 expressWs(app);
 
-// THIS MUST COME RIGHT AFTER APP INSTANTIATION
-// otherwise it doesn't works expected
-// Only in dev, Proxy the twilio serverless functions
-// so that they can be ran via ngrok as well via a single port and domain.
 if (process.env.NODE_ENV === 'development') {
   console.log('Proxying serverless functions');
   app.use(
@@ -56,19 +51,55 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Used to receive text messages from Twilio about the conversation
-app.get('/text', (req, res) => {
+app.get('/text', async (req, res) => {
   const from = req.query.From as string;
   const bodyMessage = req.query.Body as string;
 
   if (from && bodyMessage) {
     console.log('Received message:', bodyMessage);
     console.log('From:', from);
-    externalMessage = {
-      body: bodyMessage,
-      from: from,
-    };
-    res.send('text received');
+
+    console.log('phoneToCallSid:', phoneToCallSid);
+    const callSid = phoneToCallSid.get(from);
+    if (!callSid) {
+      console.warn('No active GPT session found for phone number:', from);
+      res.send('No matching call session found');
+      return;
+    }
+
+    const gptService = gptSessions.get(callSid);
+    if (!gptService) {
+      console.warn('No GPT service found for callSid:', callSid);
+      res.send('No GPT service found');
+      return;
+    }
+
+    const prompt = gptService.callerContext.validation.isRequired
+      ? 'Received text message for user authentication'
+      : 'Received text message with content, upsert the customer mortgage with the appropriate values';
+
+    await sendToCoast({
+      sender: 'Customer',
+      type: 'string',
+      message: bodyMessage,
+      phoneNumber: gptService.customerNumber,
+    }).catch((err) => console.error('Failed to send to Coast:', err));
+
+    const gptResponse = await gptService.generateResponse({
+      role: 'user',
+      prompt,
+      externalMessage: {
+        body: bodyMessage,
+        from: from,
+      },
+    });
+
+    const ws = wsMap.get(callSid);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify(gptResponse));
+    }
+
+    res.send('Text processed');
   } else {
     res.send('Invalid message received');
   }
@@ -77,6 +108,7 @@ app.get('/text', (req, res) => {
 app.ws('/conversation-relay', (ws: WebSocket) => {
   console.log('New Conversation Relay websocket established');
   let gptService: GptService | null = null;
+  let currentCallSid: string | null = null;
 
   ws.on('message', async (data: string) => {
     try {
@@ -88,56 +120,28 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           4
         )}`
       );
+
       let gptResponse: Types.GptReturnResponse;
-      console.log(message.type);
+
       switch (message.type) {
         case 'info':
           console.debug(
             `[Conversation Relay] info: ${JSON.stringify(message, null, 4)}`
           );
-          // A text message is received from the user
-          if (externalMessage && gptService) {
-            const message = JSON.parse(data);
-            let prompt = '';
-            console.log('message in text', message);
-            console.log('external_messages in ws', externalMessage);
-
-            if (gptService.callerContext.validation.isRequired) {
-              prompt = 'Received text message for user authentication';
-            } else {
-              prompt =
-                'Received text message with content, upsert the customer mortgage with the appropriate values';
-            }
-
-            gptResponse = await gptService.generateResponse({
-              role: 'user',
-              prompt,
-              externalMessage,
-            });
-
-            // reset the message to null afterwards
-            externalMessage = null;
-            ws.send(JSON.stringify(gptResponse));
-          }
           break;
         case 'prompt':
           console.info(
             `[Conversation Relay] Caller Message: ${message.voicePrompt}`
           );
 
-          axios
-            .post(
-              COAST_WEBHOOK_URL,
-              {
-                sender: 'Customer',
-                type: 'string',
-                message: message.voicePrompt,
-              },
-              { headers: { 'Content-Type': 'application/json' } }
-            )
-            .catch((err) => console.log(err));
-
           if (gptService) {
+            await sendToCoast({
+              sender: 'Customer',
+              type: 'string',
+              message: message.voicePrompt,
+              phoneNumber: gptService.customerNumber,
+            }).catch((err) => console.error('Failed to send to Coast:', err));
+
             gptResponse = await gptService.generateResponse({
               role: 'user',
               prompt: message.voicePrompt,
@@ -150,11 +154,12 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
                 4
               )}`
             );
-
             ws.send(JSON.stringify(gptResponse));
           }
           break;
         case 'interrupt':
+          gptService?.abort();
+
           console.info(
             `[Conversation Relay] Interrupt: ${JSON.stringify(
               message,
@@ -163,27 +168,34 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             )}`
           );
 
-          axios
-            .post(
-              COAST_WEBHOOK_URL,
-              {
-                sender: 'interruption',
-                type: 'string',
-                message: 'Interrupted',
-              },
-              { headers: { 'Content-Type': 'application/json' } }
-            )
-            .catch((err) => console.log(err));
+          if (gptService) {
+            await sendToCoast({
+              sender: 'interruption',
+              type: 'string',
+              message: 'Interrupted',
+              phoneNumber: gptService?.customerNumber,
+            }).catch((err) => console.error('Failed to send to Coast:', err));
+          }
 
           break;
         case 'dtmf':
           console.debug(`[Conversation Relay] DTMF: ${message.digits?.digit}`);
           break;
-        case 'setup':
+        case 'setup': {
           const { to, from, callSid, direction, customParameters } = message;
+
+          //Prevent generating GPT service if it's a self-call (loop)
+          if (from === to) {
+            console.warn(
+              `[Conversation Relay] Skipping setup for self-call (from === to): ${from}`
+            );
+            // Clean up only this WebSocket connection if it's a self-call
+            ws.close(1000, 'Self-call detected, closing connection');
+            return;
+          }
+
           const segmentProfile =
             customParameters['segmentProfile'] ?? 'unknown';
-
           let loans = customParameters['loans'] ?? 'unknown';
 
           const initialCallInfo = resolveInitialCallInfo({
@@ -200,9 +212,9 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             initialCallInfo,
           });
 
-          if (initialCallInfo.direction === 'outbound-api') {
-            gptService.callerContext.validation.isRequired = true;
-          }
+          // if (initialCallInfo.direction.includes('outbound')) {
+          //   gptService.callerContext.validation.isRequired = true;
+          // }
 
           await gptService.notifyInitialCallParams();
 
@@ -214,26 +226,26 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
           let prompt = `use the ### Instructions to guide the call.
           The call direction is ${
             initialCallInfo.direction
-          } call with the customer 
-          The call reference is ${initialCallInfo.callReason}
+          } call with the customer.
+          The call reference is ${initialCallInfo.callReason}.
           The caller's segment profile is ${JSON.stringify(segmentProfile)}.
           The customer has the following mortgage loan applications: ${JSON.stringify(
             loans
           )}`;
-
-          if (customParameters['loans']) {
-            prompt += `The customer has the following mortgage loan applications: ${JSON.stringify(
-              loans
-            )}`;
-          }
 
           gptResponse = await gptService.generateResponse({
             role: 'system',
             prompt,
           });
 
+          currentCallSid = callSid;
+          gptSessions.set(callSid, gptService);
+          phoneToCallSid.set(gptService.customerNumber, callSid);
+          wsMap.set(callSid, ws);
+
           ws.send(JSON.stringify(gptResponse));
           break;
+        }
         default:
           console.log(
             `[Conversation Relay] Unknown message type: ${message.type}`
@@ -246,6 +258,15 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
 
   ws.on('close', () => {
     console.log('Client disconnected');
+    if (currentCallSid) {
+      gptSessions.delete(currentCallSid);
+      wsMap.delete(currentCallSid);
+      for (const [phone, sid] of phoneToCallSid.entries()) {
+        if (sid === currentCallSid) {
+          phoneToCallSid.delete(phone);
+        }
+      }
+    }
   });
 
   ws.on('error', (error) => {

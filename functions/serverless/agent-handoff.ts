@@ -7,10 +7,11 @@ type TwilioEventAgentHandoff = {
   CallSid: string;
   From: string;
   To: string;
+  HandoffData?: string;
+  Direction: string;
   SessionId?: string;
   SessionStatus?: string;
   SessionDuration?: string;
-  HandoffData?: string;
 };
 
 // Twilio Function signature for TypeScript
@@ -28,10 +29,14 @@ exports.handler = function (
     SessionStatus: sessionStatus,
     SessionDuration: sessionDuration,
     HandoffData: handoffData,
+    Direction: direction,
   } = event;
 
   console.log('Raw HandoffData:', handoffData);
   console.log('Full Event:', JSON.stringify(event, null, 2));
+
+  const customerNumber = direction.includes('outbound') ? to : from;
+  const agentNumber = direction.includes('outbound') ? from : to;
 
   let parsedHandoffData: Record<string, unknown> = {};
   try {
@@ -47,8 +52,8 @@ exports.handler = function (
   const taskAttributes = {
     accountSid,
     callSid,
-    from,
-    to,
+    from: agentNumber,
+    to: customerNumber,
     sessionId,
     sessionStatus,
     sessionDuration,

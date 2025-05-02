@@ -52,6 +52,7 @@ exports.handler = async function (
       message: `Calling tool get-segment-profile on ${JSON.stringify(
         customerNumber
       )}`,
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     const segmentProfile = await getSegmentProfile(customerNumber);
@@ -60,6 +61,7 @@ exports.handler = async function (
       sender: 'system:customer_profile',
       type: 'JSON',
       message: { customerData: segmentProfile },
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     // Create TwiML response
@@ -67,7 +69,7 @@ exports.handler = async function (
 
     const start = response.start();
     start.transcription({
-      intelligenceService: 'GAe6e37ed1b6405e90fac4dfa3dd69ab19'
+      intelligenceService: 'GAe6e37ed1b6405e90fac4dfa3dd69ab19',
     });
 
     // process.env.NODE_ENV === 'development' is not working as expected.
@@ -97,6 +99,7 @@ exports.handler = async function (
 
     // Define parameters for the ConversationRelay
     const conversationRelay = connect.conversationRelay({
+      speechModel: 'nova-3-general', // Speech model
       voice: 'g6xIsTj2HwM6VR4iXFCw', // Twilio voice ID
       transcriptionProvider: 'deepgram', // Transcription provider
       ttsProvider: 'Elevenlabs', // Text-to-Speech provider
@@ -105,7 +108,6 @@ exports.handler = async function (
       debug: true, // Debugging enabled
       url: relayUrl, // Your WebSocket URL
     });
-  
 
     if (segmentProfile) {
       conversationRelay.parameter({
@@ -132,12 +134,14 @@ exports.handler = async function (
       message: `Calling get-mortgages to fetch records for ${JSON.stringify(
         customerNumber
       )}...`,
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     await sendToCoast({
       sender: 'system:mortgage_records',
       type: 'JSON',
       message: loans,
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     if (loans) {
