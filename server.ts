@@ -78,13 +78,6 @@ app.get('/text', async (req, res) => {
       ? 'Received text message for user authentication'
       : 'Received text message with content, upsert the customer mortgage with the appropriate values';
 
-    await sendToCoast({
-      sender: 'Customer',
-      type: 'string',
-      message: bodyMessage,
-      phoneNumber: gptService.customerNumber,
-    }).catch((err) => console.error('Failed to send to Coast:', err));
-
     const gptResponse = await gptService.generateResponse({
       role: 'user',
       prompt,
