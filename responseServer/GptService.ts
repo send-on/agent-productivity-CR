@@ -52,6 +52,7 @@ export class GptService extends EventEmitter {
         sender: 'begin',
         type: 'string',
         message: this.customerNumber,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -165,6 +166,7 @@ export class GptService extends EventEmitter {
         message: `Calling authenticate-user to validate the user ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -176,6 +178,7 @@ export class GptService extends EventEmitter {
         sender: 'system:tool',
         type: 'string',
         message: `User validation status: ${isValidated}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -196,6 +199,7 @@ export class GptService extends EventEmitter {
         message: `Calling tool get-segment-profile on ${JSON.stringify(
           this.customerNumber
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -214,6 +218,7 @@ export class GptService extends EventEmitter {
         sender: 'system:customer_profile',
         type: 'JSON',
         message: { customerData: customerData },
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -236,6 +241,7 @@ export class GptService extends EventEmitter {
         message: `Calling update-segment-profile to update Segment customer profile with ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -250,6 +256,7 @@ export class GptService extends EventEmitter {
           sender: 'system:updated_traits',
           type: 'JSON',
           message: newTraits,
+          phoneNumber: this.customerNumber,
         })
         .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -280,6 +287,7 @@ export class GptService extends EventEmitter {
         message: `Calling get-mortgages to fetch records for ${JSON.stringify(
           args
         )}...`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -302,6 +310,7 @@ export class GptService extends EventEmitter {
         sender: 'system:mortgage_records',
         type: 'JSON',
         message: mortgages,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -334,6 +343,7 @@ export class GptService extends EventEmitter {
         message: `Calling upsert-mortgage to upsert records on ${JSON.stringify(
           args
         )}...`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -380,6 +390,7 @@ export class GptService extends EventEmitter {
         sender: 'system:mortgage_records',
         type: 'JSON',
         message: updatedRecord,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -451,6 +462,7 @@ export class GptService extends EventEmitter {
         sender: 'system:tool',
         type: 'string',
         message: 'Calling live-agent-handoff and creating summary of call...',
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -468,6 +480,7 @@ export class GptService extends EventEmitter {
         sender: 'system:ai_summary',
         type: 'string',
         message: conversationSummary,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -485,6 +498,7 @@ export class GptService extends EventEmitter {
         sender: 'system:tool',
         type: 'string',
         message: 'Live agent handoff complete... initiating...',
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -504,6 +518,7 @@ export class GptService extends EventEmitter {
         message: `Calling send-text to capture data from the user ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -537,6 +552,7 @@ export class GptService extends EventEmitter {
         message: `Calling send-recap to deliver email to the user ${JSON.stringify(
           args
         )} with the following summary: ${conversationSummary}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -569,6 +585,7 @@ export class GptService extends EventEmitter {
         message: `Calling mortgage-completion to capture data from the user ${JSON.stringify(
           args
         )}`,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -579,6 +596,7 @@ export class GptService extends EventEmitter {
         sender: 'system:message',
         type: 'JSON',
         message: response?.data,
+        phoneNumber: this.customerNumber,
       })
       .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -663,6 +681,7 @@ export class GptService extends EventEmitter {
             sender: 'Conversation Relay Assistant',
             type: 'string',
             message: content,
+            phoneNumber: this.customerNumber,
           })
           .catch((err) => console.error('Failed to send to Coast:', err));
 
@@ -682,6 +701,7 @@ export class GptService extends EventEmitter {
           sender: 'Conversation Relay Assistant',
           type: 'string',
           message: content,
+          phoneNumber: this.customerNumber,
         })
         .catch((err) => console.error('Failed to send to Coast:', err));
 

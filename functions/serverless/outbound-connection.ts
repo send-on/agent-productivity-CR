@@ -52,11 +52,14 @@ exports.handler = async function (
     url = `${url}?callReason=${encodeURIComponent(callReason)}`;
   }
 
+  console.log('Twilio URL:', url);
+
   try {
     const call = await client.calls.create({
       from,
       to,
       url,
+      statusCallbackEvent: ['initiated', 'answered', 'ringing', 'completed'],
     });
 
     // Return success response

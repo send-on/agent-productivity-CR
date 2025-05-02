@@ -10,7 +10,7 @@ import { toolManifest } from './agent/tools/toolManifest';
 import { GptService } from './responseServer/GptService';
 import { identifyMissingCols, resolveInitialCallInfo } from './agent/utils';
 import { Types } from './typings';
-import { mergeInstructions } from './agent/utils';
+import { mergeInstructions, sendToCoast } from './agent/utils';
 
 dotenv.config();
 
@@ -18,7 +18,6 @@ const promptContext = mergeInstructions('./agent/instructionsv2');
 
 const PORT: number = parseInt(process.env.PORT || '3001', 10);
 const SERVERLESS_PORT = parseInt(process.env.SERVERLESS_PORT || '3000', 10);
-const COAST_WEBHOOK_URL: string = process.env.COAST_WEBHOOK_URL || '';
 
 const gptSessions = new Map<string, GptService>();
 const phoneToCallSid = new Map<string, string>();
@@ -79,6 +78,13 @@ app.get('/text', async (req, res) => {
       ? 'Received text message for user authentication'
       : 'Received text message with content, upsert the customer mortgage with the appropriate values';
 
+    await sendToCoast({
+      sender: 'Customer',
+      type: 'string',
+      message: bodyMessage,
+      phoneNumber: gptService.customerNumber,
+    }).catch((err) => console.error('Failed to send to Coast:', err));
+
     const gptResponse = await gptService.generateResponse({
       role: 'user',
       prompt,
@@ -128,19 +134,14 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             `[Conversation Relay] Caller Message: ${message.voicePrompt}`
           );
 
-          axios
-            .post(
-              COAST_WEBHOOK_URL,
-              {
-                sender: 'Customer',
-                type: 'string',
-                message: message.voicePrompt,
-              },
-              { headers: { 'Content-Type': 'application/json' } }
-            )
-            .catch((err) => console.log(err));
-
           if (gptService) {
+            await sendToCoast({
+              sender: 'Customer',
+              type: 'string',
+              message: message.voicePrompt,
+              phoneNumber: gptService.customerNumber,
+            }).catch((err) => console.error('Failed to send to Coast:', err));
+
             gptResponse = await gptService.generateResponse({
               role: 'user',
               prompt: message.voicePrompt,
@@ -167,17 +168,15 @@ app.ws('/conversation-relay', (ws: WebSocket) => {
             )}`
           );
 
-          axios
-            .post(
-              COAST_WEBHOOK_URL,
-              {
-                sender: 'interruption',
-                type: 'string',
-                message: 'Interrupted',
-              },
-              { headers: { 'Content-Type': 'application/json' } }
-            )
-            .catch((err) => console.log(err));
+          if (gptService) {
+            await sendToCoast({
+              sender: 'interruption',
+              type: 'string',
+              message: 'Interrupted',
+              phoneNumber: gptService?.customerNumber,
+            }).catch((err) => console.error('Failed to send to Coast:', err));
+          }
+
           break;
         case 'dtmf':
           console.debug(`[Conversation Relay] DTMF: ${message.digits?.digit}`);

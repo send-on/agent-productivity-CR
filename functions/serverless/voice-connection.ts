@@ -52,6 +52,7 @@ exports.handler = async function (
       message: `Calling tool get-segment-profile on ${JSON.stringify(
         customerNumber
       )}`,
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     const segmentProfile = await getSegmentProfile(customerNumber);
@@ -60,6 +61,7 @@ exports.handler = async function (
       sender: 'system:customer_profile',
       type: 'JSON',
       message: { customerData: segmentProfile },
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     // Create TwiML response
@@ -132,12 +134,14 @@ exports.handler = async function (
       message: `Calling get-mortgages to fetch records for ${JSON.stringify(
         customerNumber
       )}...`,
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     await sendToCoast({
       sender: 'system:mortgage_records',
       type: 'JSON',
       message: loans,
+      phoneNumber: customerNumber,
     }).catch((err) => console.error('Failed to send to Coast:', err));
 
     if (loans) {
