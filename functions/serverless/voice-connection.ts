@@ -67,7 +67,7 @@ exports.handler = async function (
 
     const start = response.start();
     start.transcription({
-      intelligenceService: 'GAe6e37ed1b6405e90fac4dfa3dd69ab19'
+      intelligenceService: 'GAe6e37ed1b6405e90fac4dfa3dd69ab19',
     });
 
     // process.env.NODE_ENV === 'development' is not working as expected.
@@ -97,6 +97,7 @@ exports.handler = async function (
 
     // Define parameters for the ConversationRelay
     const conversationRelay = connect.conversationRelay({
+      speechModel: 'nova-3-general', // Speech model
       voice: 'g6xIsTj2HwM6VR4iXFCw', // Twilio voice ID
       transcriptionProvider: 'deepgram', // Transcription provider
       ttsProvider: 'Elevenlabs', // Text-to-Speech provider
@@ -105,7 +106,6 @@ exports.handler = async function (
       debug: true, // Debugging enabled
       url: relayUrl, // Your WebSocket URL
     });
-  
 
     if (segmentProfile) {
       conversationRelay.parameter({

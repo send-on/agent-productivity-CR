@@ -90,7 +90,7 @@ export class GptService extends EventEmitter {
 
   private async createConversationSummary() {
     const summaryPrompt: ChatCompletionMessageParam = {
-      role: 'user',
+      role: 'system',
       content: `Can you please summarize this conversation in a clear and friendly way for the customer? 
       Include any key information they provided or that was discussed. 
       Don't tell me this is a summary, just give me the summary.`,
@@ -102,7 +102,7 @@ export class GptService extends EventEmitter {
       messages: [...this.messages, summaryPrompt],
       stream: false,
     });
-
+    // return 'summary of conversation';
     return summaryResponse.choices[0]?.message?.content || '';
   }
 
@@ -138,6 +138,9 @@ export class GptService extends EventEmitter {
           break;
         case 'mortgage-completion':
           await this.mortgageCompletion(toolCall);
+          break;
+        case 'send-recap':
+          await this.sendRecap(toolCall);
           break;
         default:
           this.messages.push({
@@ -544,13 +547,13 @@ export class GptService extends EventEmitter {
       templateId: SENDGRID_TEMPLATE_ID_COMPLETION,
     });
 
-    const responseContent = {
-      type: 'text',
-      last: true,
-      token: `I have sent you an email recap, is there anything else I can help you with, or will that be all for today?`,
-    };
+    // const responseContent = {
+    //   type: 'system',
+    //   last: true,
+    //   token: `You have been sent a recap email with the summary of the conversation.`,
+    // };
 
-    return responseContent;
+    // return responseContent;
   }
 
   private async mortgageCompletion(
@@ -632,10 +635,6 @@ export class GptService extends EventEmitter {
         // Send the caller to the live agent which requires an end call event afterwards.
         if (toolCalls[0].function.name === 'live-agent-handoff') {
           return await this.liveAgentHandoff(toolCalls[0], assistantMessage);
-        }
-        // Sending recap requires a returned value to the assistant.
-        else if (toolCalls[0].function.name === 'send-recap') {
-          return await this.sendRecap(toolCalls[0]);
         }
 
         await this.handleToolCalls(toolCalls);
