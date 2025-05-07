@@ -103,7 +103,7 @@ exports.handler = async function (
       debug: true, // Debugging enabled
       url: relayUrl, // Your WebSocket URL
       // @ts-expect-error - Twilio types are not up to date
-      intelligenceService: 'GA39ab662a15d23892d8e5a26bf9701a41', // Intelligence service
+      intelligenceService: 'GAe6e37ed1b6405e90fac4dfa3dd69ab19', // Intelligence service
     });
 
     if (segmentProfile) {
