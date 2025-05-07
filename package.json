@@ -28,7 +28,7 @@
     "fs": "^0.0.1-security",
     "http-proxy-middleware": "^3.0.3",
     "openai": "^4.20.1",
-    "twilio": "^5.3.6",
+    "twilio": "^5.6.0",
     "typescript": "^5.8.2"
   },
   "devDependencies": {

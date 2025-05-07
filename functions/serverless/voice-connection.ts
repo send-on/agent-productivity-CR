@@ -67,11 +67,6 @@ exports.handler = async function (
     // Create TwiML response
     const response = new twilio.twiml.VoiceResponse();
 
-    const start = response.start();
-    start.transcription({
-      intelligenceService: 'GAe6e37ed1b6405e90fac4dfa3dd69ab19',
-    });
-
     // process.env.NODE_ENV === 'development' is not working as expected.
     // Keying off ngrok URL to determine if we are in development - shouldn't be in twilio console env var list.
     // Can set this to false here if you want to test production endpoints locally.
@@ -107,6 +102,8 @@ exports.handler = async function (
       interruptByDtmf: true, // Interrupt by DTMF enabled
       debug: true, // Debugging enabled
       url: relayUrl, // Your WebSocket URL
+      // @ts-expect-error - Twilio types are not up to date
+      intelligenceService: 'GA39ab662a15d23892d8e5a26bf9701a41', // Intelligence service
     });
 
     if (segmentProfile) {
